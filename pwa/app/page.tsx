@@ -32,12 +32,10 @@ export default function Home() {
       setLoading(false)
 
       if (session?.provider_token) {
-        // Cas A : On vient de se connecter, Supabase nous donne le token tout neuf
         console.log("[YT Simulator] 📥 Token reçu de Supabase. Sauvegarde locale...");
         localStorage.setItem('yt_oauth_token', session.provider_token)
         fetchYouTubeSubscriptions(session.provider_token)
       } else if (session?.user) {
-        // Cas B : L'user a fait F5. Supabase n'a plus le token, on regarde dans NOTRE stockage
         const savedToken = localStorage.getItem('yt_oauth_token')
         
         if (savedToken) {
@@ -51,7 +49,6 @@ export default function Home() {
     
     checkUser()
 
-    // Écouteur de changement d'état (Utile pour capturer le token au tout premier clic de login)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null)
       
@@ -65,7 +62,6 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Récupération des vrais abonnements YouTube
   const fetchYouTubeSubscriptions = async (token: string) => {
     setLoadingSubs(true)
     try {
@@ -74,7 +70,6 @@ export default function Home() {
         { headers: { Authorization: `Bearer ${token}` } }
       )
       
-      // Si l'API renvoie 401, c'est que le token a expiré (plus d'1h)
       if (res.status === 401) {
         console.warn("[YT Simulator] ⏰ Le token Google a expiré.")
         localStorage.removeItem('yt_oauth_token')
@@ -108,7 +103,7 @@ export default function Home() {
         scopes: 'https://www.googleapis.com/auth/youtube.readonly',
         queryParams: {
           access_type: 'offline',
-          prompt: 'consent' // Force l'obtention des droits au login initial
+          prompt: 'consent'
         }
       },
     })
@@ -120,6 +115,7 @@ export default function Home() {
     await supabase.auth.signOut()
     setSubscriptions([])
     setIsCascadeOpen(false)
+    setActiveTab('accueil') // Reset sur l'accueil pour le prochain login
   }
 
   if (loading) {
@@ -151,11 +147,69 @@ export default function Home() {
   return (
     <div className="app-container">
       
+      {/* ─── CONTENU DYNAMIQUE DES ONGLETS ─── */}
       <main className="tab-content">
         {activeTab === 'accueil' && (
           <section>
             <h2 className="tab-title">Accueil</h2>
-            <p style={{ color: '#aaa', fontSize: '14px' }}>Ici s'affichera la grille principale.</p>
+            <p style={{ color: '#aaa', fontSize: '14px' }}>Ici s'affichera la grille principale des vidéos.</p>
+          </section>
+        )}
+
+        {activeTab === 'subscriptions' && (
+          <section>
+            <h2 className="tab-title">Vos Abonnements</h2>
+            <p style={{ color: '#aaa', fontSize: '14px' }}>Sélectionnez une chaîne dans le menu du bas pour filtrer.</p>
+          </section>
+        )}
+
+        {activeTab === 'downloads' && (
+          <section>
+            <h2 className="tab-title">Téléchargements</h2>
+            <p style={{ color: '#aaa', fontSize: '14px' }}>Aucun contenu téléchargé pour le moment.</p>
+          </section>
+        )}
+
+        {activeTab === 'profile' && (
+          <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <h2 className="tab-title">Mon Profil</h2>
+            
+            <div style={{ background: '#1a1a1a', padding: '20px', borderRadius: '12px', border: '1px solid #333' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
+                {user.user_metadata?.avatar_url && (
+                  <img 
+                    src={user.user_metadata.avatar_url} 
+                    alt="Avatar" 
+                    style={{ width: '60px', height: '60px', borderRadius: '50%', border: '2px solid red' }}
+                  />
+                )}
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px' }}>{user.user_metadata?.full_name || 'Utilisateur'}</h3>
+                  <p style={{ margin: '4px 0 0 0', color: '#888', fontSize: '14px' }}>{user.email}</p>
+                </div>
+              </div>
+
+              <hr style={{ border: 'none', borderTop: '1px solid #333', margin: '20px 0' }} />
+
+              <button 
+                onClick={handleLogout} 
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: '#e50914',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s'
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.background = '#b81d24')}
+                onMouseOut={(e) => (e.currentTarget.style.background = '#e50914')}
+              >
+                Se déconnecter de l'application
+              </button>
+            </div>
           </section>
         )}
       </main>
