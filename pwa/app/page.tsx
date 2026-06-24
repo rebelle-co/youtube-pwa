@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { User } from '@supabase/supabase-js'
-import './login.css'
+import './styles/login.css'
 
 type TabType = 'accueil' | 'downloads' | 'subscriptions' | 'profile'
 
