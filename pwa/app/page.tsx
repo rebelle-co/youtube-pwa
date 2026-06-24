@@ -6,6 +6,7 @@ import { User } from '@supabase/supabase-js'
 import './styles/login.css'
 
 type TabType = 'accueil' | 'downloads' | 'subscriptions' | 'profile'
+type SubTabType = 'standard' | 'shorts'
 
 interface YouTubeSubscription {
   id: string
@@ -18,12 +19,14 @@ interface YouTubeVideo {
   title: string
   thumbnail: string
   publishedAt: string
+  type: SubTabType // 'standard' ou 'shorts'
 }
 
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabType>('accueil')
+  const [activeSubTab, setActiveSubTab] = useState<SubTabType>('standard')
   
   // États pour la cascade d'abonnements
   const [subscriptions, setSubscriptions] = useState<YouTubeSubscription[]>([])
@@ -82,7 +85,6 @@ export default function Home() {
       let nextPageToken = ''
       let hasNextPage = true
 
-      // Boucle tant qu'il y a des pages d'abonnements disponibles
       while (hasNextPage) {
         const pageParam = nextPageToken ? `&pageToken=${nextPageToken}` : ''
         const res = await fetch(
@@ -108,7 +110,6 @@ export default function Home() {
         
         allSubs = [...allSubs, ...formattedSubs]
 
-        // Si l'API renvoie un token pour la page suivante, on continue, sinon on arrête
         if (data.nextPageToken) {
           nextPageToken = data.nextPageToken
         } else {
@@ -125,7 +126,20 @@ export default function Home() {
     }
   }
 
-  // Récupération des vidéos d'une chaîne sélectionnée
+  // Helper pour parser la durée ISO 8601 de YouTube (ex: PT1M15S) et vérifier si c'est un Short (<= 60s)
+  const checkIfShort = (isoDuration: string): boolean => {
+    if (!isoDuration || isoDuration.includes('H')) return false // Plus d'une heure -> standard
+    const minutesMatch = isoDuration.match(/(\d+)M/)
+    const secondsMatch = isoDuration.match(/(\d+)S/)
+    
+    const minutes = minutesMatch ? parseInt(minutesMatch[1], 10) : 0
+    const seconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 0
+    
+    const totalSeconds = (minutes * 60) + seconds
+    return totalSeconds <= 60
+  }
+
+  // Récupération de TOUTES les vidéos d'une chaîne + triage Shorts vs Standard
   const fetchVideosForChannel = async (channelId: string) => {
     const token = localStorage.getItem('yt_oauth_token')
     if (!token) return
@@ -133,25 +147,69 @@ export default function Home() {
     setLoadingVideos(true)
     try {
       const uploadsPlaylistId = 'UU' + channelId.substring(2)
+      let rawItems: any[] = []
+      let nextPageToken = ''
+      let hasNextPage = true
+      let pageCount = 0 // Sécurité performance : on limite à 3 pages max (~150 vidéos récentes)
       
-      const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=16`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
+      // 1. On boucle pour récupérer les vidéos brutes de la playlist d'uploads
+      while (hasNextPage && pageCount < 3) {
+        const pageParam = nextPageToken ? `&pageToken=${nextPageToken}` : ''
+        const res = await fetch(
+          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50${pageParam}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
 
-      if (!res.ok) throw new Error('Erreur API YouTube Videos')
+        if (!res.ok) throw new Error('Erreur API YouTube Videos Playlist')
+        const data = await res.json()
+        rawItems = [...rawItems, ...data.items]
 
-      const data = await res.json()
-      
-      const formattedVideos = data.items.map((item: any) => ({
-        id: item.snippet.resourceId.videoId,
-        title: item.snippet.title,
-        thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
-        publishedAt: new Date(item.snippet.publishedAt).toLocaleDateString('fr-FR'),
-      }))
+        if (data.nextPageToken) {
+          nextPageToken = data.nextPageToken
+          pageCount++
+        } else {
+          hasNextPage = false
+        }
+      }
 
-      setVideos(formattedVideos)
-      console.log(`[YT Simulator] 📺 Vidéos de la chaîne chargées !`);
+      if (rawItems.length === 0) {
+        setVideos([])
+        return
+      }
+
+      // 2. Hydratation : L'API playlistItems ne donne pas la durée. On regroupe les IDs par packs de 50 pour demander leurs détails.
+      const videoIds = rawItems.map((item: any) => item.snippet.resourceId.videoId)
+      let detailedVideos: YouTubeVideo[] = []
+
+      for (let i = 0; i < videoIds.length; i += 50) {
+        const chunk = videoIds.slice(i, i + 50)
+        const detailsRes = await fetch(
+          `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${chunk.join(',')}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+
+        if (detailsRes.ok) {
+          const detailsData = await detailsRes.json()
+          const formattedChunk = detailsData.items.map((item: any) => {
+            const duration = item.contentDetails?.duration || ''
+            const isShort = checkIfShort(duration)
+
+            return {
+              id: item.id,
+              title: item.snippet.title,
+              thumbnail: isShort 
+                ? (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '')
+                : (item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || ''),
+              publishedAt: new Date(item.snippet.publishedAt).toLocaleDateString('fr-FR'),
+              type: isShort ? 'shorts' : 'standard'
+            }
+          })
+          detailedVideos = [...detailedVideos, ...formattedChunk]
+        }
+      }
+
+      setVideos(detailedVideos)
+      console.log(`[YT Simulator] 📺 Flux trié chargé : ${detailedVideos.length} vidéos trouvées.`);
     } catch (err) {
       console.error("[YT Simulator] Erreur lors du fetch des vidéos :", err)
     } finally {
@@ -182,6 +240,7 @@ export default function Home() {
     setSelectedChannel(null)
     setIsCascadeOpen(false)
     setActiveTab('accueil')
+    setActiveSubTab('standard')
   }
 
   if (loading) {
@@ -210,6 +269,9 @@ export default function Home() {
     )
   }
 
+  // Filtrage des vidéos selon le sous-onglet sélectionné
+  const filteredVideos = videos.filter(video => video.type === activeSubTab)
+
   return (
     <div className="app-container">
       
@@ -226,6 +288,7 @@ export default function Home() {
           <section>
             {selectedChannel ? (
               <>
+                {/* En-tête de la chaîne sélectionnée */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px', background: '#1a1a1a', padding: '15px', borderRadius: '12px', border: '1px solid #333' }}>
                   <img src={selectedChannel.thumbnail} alt={selectedChannel.title} style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
                   <div>
@@ -234,24 +297,85 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* ─── SYSTÈME DE SOUS-ONGLETS (VIDEOS / SHORTS) ─── */}
+                <div style={{ display: 'flex', gap: '20px', marginBottom: '25px', borderBottom: '1px solid #222' }}>
+                  <button 
+                    onClick={() => setActiveSubTab('standard')} 
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: activeSubTab === 'standard' ? '#fff' : '#666',
+                      borderBottom: activeSubTab === 'standard' ? '2px solid #e50914' : '2px solid transparent',
+                      paddingBottom: '10px',
+                      fontSize: '15px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Vidéos
+                  </button>
+                  <button 
+                    onClick={() => setActiveSubTab('shorts')} 
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: activeSubTab === 'shorts' ? '#fff' : '#666',
+                      borderBottom: activeSubTab === 'shorts' ? '2px solid #e50914' : '2px solid transparent',
+                      paddingBottom: '10px',
+                      fontSize: '15px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    Shorts ⚡
+                  </button>
+                </div>
+
                 {loadingVideos ? (
-                  <div style={{ color: '#aaa', fontSize: '14px' }}>Extraction des flux médias bruts en cours...</div>
-                ) : videos.length === 0 ? (
-                  <div style={{ color: '#aaa', fontSize: '14px' }}>Aucune vidéo trouvée pour cette chaîne.</div>
+                  <div style={{ color: '#aaa', fontSize: '14px' }}>Extraction et classification des flux médias bruts...</div>
+                ) : filteredVideos.length === 0 ? (
+                  <div style={{ color: '#aaa', fontSize: '14px' }}>Aucun contenu disponible dans cette catégorie.</div>
                 ) : (
+                  /* Grille adaptative : layout horizontal classique pour vidéos, vertical fin pour les shorts */
                   <div style={{ 
                     display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', 
+                    gridTemplateColumns: activeSubTab === 'shorts' 
+                      ? 'repeat(auto-fill, minmax(160px, 1fr))' 
+                      : 'repeat(auto-fill, minmax(260px, 1fr))', 
                     gap: '20px' 
                   }}>
-                    {videos.map((video) => (
-                      <div key={video.id} className="video-card" style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', border: '1px solid #333', cursor: 'pointer' }} onClick={() => console.log("Lecture de la vidéo :", video.id)}>
-                        <img src={video.thumbnail} alt={video.title} style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover' }} />
+                    {filteredVideos.map((video) => (
+                      <div 
+                        key={video.id} 
+                        className="video-card" 
+                        style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', border: '1px solid #333', cursor: 'pointer' }} 
+                        onClick={() => console.log("Lecture de la vidéo :", video.id)}
+                      >
+                        <img 
+                          src={video.thumbnail} 
+                          alt={video.title} 
+                          style={{ 
+                            width: '100%', 
+                            aspectRatio: activeSubTab === 'shorts' ? '9/16' : '16/9', 
+                            objectFit: 'cover' 
+                          }} 
+                        />
                         <div style={{ padding: '12px' }}>
-                          <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#fff', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.4' }}>
+                          <h4 style={{ 
+                            margin: '0 0 8px 0', 
+                            fontSize: '13px', 
+                            color: '#fff', 
+                            display: '-webkit-box', 
+                            WebkitLineClamp: 2, 
+                            WebkitBoxOrient: 'vertical', 
+                            overflow: 'hidden', 
+                            lineHeight: '1.4' 
+                          }}>
                             {video.title}
                           </h4>
-                          <span style={{ color: '#777', fontSize: '12px' }}>Publiée le {video.publishedAt}</span>
+                          <span style={{ color: '#777', fontSize: '11px' }}>{video.publishedAt}</span>
                         </div>
                       </div>
                     ))}
@@ -358,6 +482,7 @@ export default function Home() {
                     setActiveTab('subscriptions');
                     setSelectedChannel(sub);       
                     fetchVideosForChannel(sub.id); 
+                    setActiveSubTab('standard'); // Reset par défaut sur vidéos classiques
                   }}
                 >
                   <img src={sub.thumbnail} alt={sub.title} className="nav-sub-avatar" />
