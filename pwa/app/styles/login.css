@@ -1,0 +1,149 @@
+/* Style général de la page */
+.auth-wrapper {
+  min-height: 100vh;
+  background-color: #0f0f0f;
+  color: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Carte centrale */
+.auth-card {
+  max-width: 450px;
+  width: 100%;
+  background-color: #1f1f1f;
+  border: 1px solid #2f2f2f;
+  border-radius: 24px;
+  padding: 40px 30px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Nom du site */
+.site-brand {
+  font-size: 14px;
+  font-weight: 700;
+  color: #ff0000;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Titre vague et accrocheur */
+.site-title {
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  margin-bottom: 16px;
+}
+
+/* Description complète */
+.site-description {
+  font-size: 14px;
+  color: #aaaaaa;
+  line-height: 1.6;
+  margin-bottom: 32px;
+}
+
+/* Bouton Google */
+.btn-google {
+  width: 100%;
+  max-width: 320px;
+  background-color: #ffffff;
+  color: #000000;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 14px;
+  padding: 14px 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-google:hover {
+  background-color: #e6e6e6;
+}
+
+.btn-google:active {
+  transform: scale(0.98);
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Écran utilisateur connecté */
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #2f2f2f;
+  padding: 12px 16px;
+  border-radius: 16px;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.user-info h3 {
+  font-size: 14px;
+  margin: 0;
+  font-weight: 600;
+}
+
+.user-info p {
+  font-size: 12px;
+  color: #aaaaaa;
+  margin: 20px 0 0 0;
+}
+
+.btn-logout {
+  background: transparent;
+  color: #888888;
+  border: 1px solid #333333;
+  padding: 10px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.btn-logout:hover {
+  border-color: #ff0000;
+  color: #ff0000;
+}
+
+/* Animation de chargement */
+.loading-text {
+  color: #888888;
+  font-size: 16px;
+  font-weight: 500;
+  animation: pulse-animation 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse-animation {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
