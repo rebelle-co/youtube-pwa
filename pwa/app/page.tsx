@@ -24,36 +24,45 @@ export default function Home() {
   const [loadingSubs, setLoadingSubs] = useState(false)
 
   useEffect(() => {
+    console.log("[YT Simulator] 🚀 useEffect principal initialisé");
+
     const checkUser = async () => {
+      console.log("[YT Simulator] 🔍 Exécution de checkUser()...");
       const { data: { session } } = await supabase.auth.getSession()
+      
+      console.log("[YT Simulator] 📊 Résultat de getSession() :", {
+        userPresent: !!session?.user,
+        email: session?.user?.email,
+        providerTokenPresent: !!session?.provider_token,
+        tokenPrefix: session?.provider_token ? session.provider_token.substring(0, 10) + "..." : "aucun"
+      });
+
       setUser(session?.user ?? null)
       setLoading(false)
 
       if (session?.provider_token) {
-        // Cas 1 : On a le jeton Google, on nettoie les flags et on charge en direct
+        console.log("[YT Simulator] ✅ Cas 1 : Token présent dans getSession(). Nettoyage du flag et chargement.");
         sessionStorage.removeItem('yt_sync_pending')
         fetchYouTubeSubscriptions(session.provider_token)
       } else if (session?.user) {
-        // Cas 2 : L'utilisateur est connecté à Supabase mais le jeton Google est absent (F5 ou réouverture)
         const isSyncPending = sessionStorage.getItem('yt_sync_pending')
+        console.log(`[YT Simulator] 🤔 Cas 2 : Utilisateur connecté mais PAS de token Google. Status du flag synchro: ${isSyncPending}`);
 
         if (isSyncPending === 'true') {
-          // Si on revient tout juste de la redirection et que le token n'est toujours pas là,
-          // on arrête pour éviter une boucle infinie (ex: problème côté Google)
+          // Si on revient de la redirection et que c'est toujours vide
           sessionStorage.removeItem('yt_sync_pending')
-          console.warn("La synchronisation automatique a échoué à récupérer le jeton Google.")
+          console.warn("[YT Simulator] ⚠️ La synchronisation automatique a échoué à récupérer le jeton Google.");
         } else {
-          // On marque qu'on lance la synchronisation avant de rediriger
+          console.log("[YT Simulator] 🔄 Flag absent. Tentative de synchronisation silencieuse via signInWithOAuth...");
           sessionStorage.setItem('yt_sync_pending', 'true')
           setLoadingSubs(true)
 
-          // Micro-redirection silencieuse (invisible si l'utilisateur est déjà connecté à Google)
           await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
               redirectTo: window.location.origin,
               scopes: 'https://www.googleapis.com/auth/youtube.readonly',
-              queryParams: { prompt: 'none' }, // Demande à Google de valider en tâche de fond
+              queryParams: { prompt: 'none' }, 
             },
           })
         }
@@ -62,19 +71,30 @@ export default function Home() {
     
     checkUser()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log(`[YT Simulator] ⚡ onAuthStateChange déclenché - Événement: ${event}`, {
+        userPresent: !!session?.user,
+        providerTokenPresent: !!session?.provider_token,
+        tokenPrefix: session?.provider_token ? session.provider_token.substring(0, 10) + "..." : "aucun"
+      });
+
       setUser(session?.user ?? null)
       if (session?.provider_token) {
+        console.log("[YT Simulator] 🎉 Jeton trouvé dans onAuthStateChange ! Nettoyage et chargement des abonnements...");
         sessionStorage.removeItem('yt_sync_pending')
         fetchYouTubeSubscriptions(session.provider_token)
       }
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      console.log("[YT Simulator] 🛑 Nettoyage du useEffect");
+      subscription.unsubscribe()
+    }
   }, [])
 
   // Récupération des vrais abonnements YouTube
   const fetchYouTubeSubscriptions = async (token: string) => {
+    console.log("[YT Simulator] 📥 fetchYouTubeSubscriptions appelé avec le token:", token.substring(0, 10) + "...");
     setLoadingSubs(true)
     try {
       const res = await fetch(
@@ -82,9 +102,12 @@ export default function Home() {
         { headers: { Authorization: `Bearer ${token}` } }
       )
       
-      if (!res.ok) throw new Error('Erreur API YouTube')
+      console.log(`[YT Simulator] 📡 Réponse HTTP API YouTube: ${res.status} ${res.statusText}`);
+      
+      if (!res.ok) throw new Error(`Erreur API YouTube: ${res.status}`)
       
       const data = await res.json()
+      console.log(`[YT Simulator] 📋 Données YouTube reçues. Nombre d'items:`, data.items?.length || 0);
       
       const formattedSubs = data.items.map((item: any) => ({
         id: item.snippet.resourceId.channelId,
@@ -94,13 +117,14 @@ export default function Home() {
       
       setSubscriptions(formattedSubs)
     } catch (err) {
-      console.warn("API YouTube bloquée ou token expiré.")
+      console.error("[YT Simulator] ❌ Erreur dans fetchYouTubeSubscriptions:", err)
     } finally {
       setLoadingSubs(false)
     }
   }
 
   const loginWithGoogle = async () => {
+    console.log("[YT Simulator] 🔑 Clic sur Connexion manuelle Google");
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -111,6 +135,7 @@ export default function Home() {
   }
 
   const handleLogout = async () => {
+    console.log("[YT Simulator] 🚪 Déconnexion de l'application");
     sessionStorage.removeItem('yt_sync_pending')
     await supabase.auth.signOut()
     setSubscriptions([])
