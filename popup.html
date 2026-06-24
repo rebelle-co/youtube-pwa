@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 320px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #0f0f0f;
+      color: #ffffff;
+      margin: 0;
+      padding: 15px;
+    }
+    h2 {
+      font-size: 18px;
+      margin-top: 0;
+      border-bottom: 1px solid #3f3f3f;
+      padding-bottom: 10px;
+      color: #f1f1f1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .premium-badge {
+      background-color: #ff0000;
+      color: white;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+    }
+    .option-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    .option-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .option-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .option-desc {
+      font-size: 11px;
+      color: #aaa;
+    }
+    /* Style des Switchs (Boutons On/Off) */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 22px;
+    }
+    .switch input { display: none; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #3f3f3f;
+      transition: .3s;
+      border-radius: 22px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px; width: 16px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #ff0000; }
+    input:checked + .slider:before { transform: translateX(18px); }
+    
+    /* Section Téléchargement */
+    .download-box {
+      margin-top: 15px;
+      border-top: 1px solid #3f3f3f;
+      padding-top: 15px;
+    }
+    input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px;
+      background-color: #212121;
+      border: 1px solid #3f3f3f;
+      color: white;
+      border-radius: 4px;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    button {
+      width: 100%;
+      background-color: #ffffff;
+      color: #0f0f0f;
+      border: none;
+      padding: 8px;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button:hover { background-color: #e6e6e6; }
+    
+    .link-btn {
+      background-color: #212121;
+      color: #ff4d4d;
+      border: 1px solid #3f3f3f;
+      margin-top: 5px;
+    }
+    .link-btn:hover { background-color: #333; }
+
+    /* Styles pour le Mode Clair (Light Mode) */
+    body.light-mode {
+      background-color: #f9f9f9;
+      color: #0f0f0f;
+    }
+    body.light-mode h2 {
+      color: #0f0f0f;
+      border-bottom: 1px solid #e5e5e5;
+    }
+    body.light-mode .option-desc {
+      color: #606060;
+    }
+    body.light-mode .slider {
+      background-color: #ccc;
+    }
+    body.light-mode input:checked + .slider {
+      background-color: #ff0000;
+    }
+    body.light-mode input[type="text"] {
+      background-color: #fff;
+      border: 1px solid #ccc;
+      color: #0f0f0f;
+    }
+    body.light-mode button {
+      background-color: #0f0f0f;
+      color: #fff;
+    }
+    body.light-mode button:hover {
+      background-color: #272727;
+    }
+    body.light-mode .link-btn {
+      background-color: #f1f1f1;
+      color: #cc0000;
+      border: 1px solid #ccc;
+    }
+    body.light-mode .link-btn:hover {
+      background-color: #e5e5e5;
+    }
+    body.light-mode .download-box {
+      border-top: 1px solid #e5e5e5;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>YouTube Simulator <span class="premium-badge">Premium</span></h2>
+
+  <!-- Option 1 : Activer/Désactiver Pubs -->
+  <div class="option-row">
+    <div class="option-info">
+      <span class="option-title">Plus aucune publicité</span>
+      <span class="option-desc">Bloque vidéos et bannières</span>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="blockAdsToggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <!-- Option 2 : Écran éteint (Simulé en arrière-plan) -->
+  <div class="option-row">
+    <div class="option-info">
+      <span class="option-title">Lecture écran éteint</span>
+      <span class="option-desc">Empêche la mise en pause si tu changes d'onglet</span>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="backgroundPlayToggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <!-- Option Mode Sombre / Clair -->
+  <div class="option-row">
+    <div class="option-info">
+      <span class="option-title">Mode Sombre</span>
+      <span class="option-desc">Bascule entre thème sombre et clair</span>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="darkModeToggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <!-- Option 3 : YouTube Music -->
+  <button id="ytMusicBtn" class="link-btn">Ouvrir YouTube Music inclus</button>
+
+  <!-- Option 4 : Téléchargement Vidéo -->
+  <!-- Section Téléchargement & Hors-ligne -->
+  <div class="download-box">
+    <span class="option-title" style="display:block; margin-bottom:5px;">Télécharger la vidéo</span>
+    <input type="text" id="videoUrlInput" placeholder="URL de la vidéo YouTube...">
+    <button id="downloadBtn">Télécharger dans la Playlist</button>
+    <button id="openPlaylistBtn" class="link-btn" style="color: #00ffcc; border-color: #00ffcc; margin-top: 10px;">
+      Voir mes vidéos Hors-ligne 📥
+    </button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
