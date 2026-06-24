@@ -24,77 +24,49 @@ export default function Home() {
   const [loadingSubs, setLoadingSubs] = useState(false)
 
   useEffect(() => {
-    console.log("[YT Simulator] 🚀 useEffect principal initialisé");
+    console.log("[YT Simulator] 🚀 Initialisation du composant");
 
     const checkUser = async () => {
-      console.log("[YT Simulator] 🔍 Exécution de checkUser()...");
       const { data: { session } } = await supabase.auth.getSession()
-      
-      console.log("[YT Simulator] 📊 Résultat de getSession() :", {
-        userPresent: !!session?.user,
-        email: session?.user?.email,
-        providerTokenPresent: !!session?.provider_token,
-        tokenPrefix: session?.provider_token ? session.provider_token.substring(0, 10) + "..." : "aucun"
-      });
-
       setUser(session?.user ?? null)
       setLoading(false)
 
       if (session?.provider_token) {
-        console.log("[YT Simulator] ✅ Cas 1 : Token présent dans getSession(). Nettoyage du flag et chargement.");
-        sessionStorage.removeItem('yt_sync_pending')
+        // Cas A : On vient de se connecter, Supabase nous donne le token tout neuf
+        console.log("[YT Simulator] 📥 Token reçu de Supabase. Sauvegarde locale...");
+        localStorage.setItem('yt_oauth_token', session.provider_token)
         fetchYouTubeSubscriptions(session.provider_token)
       } else if (session?.user) {
-        const isSyncPending = sessionStorage.getItem('yt_sync_pending')
-        console.log(`[YT Simulator] 🤔 Cas 2 : Utilisateur connecté mais PAS de token Google. Status du flag synchro: ${isSyncPending}`);
-
-        if (isSyncPending === 'true') {
-          // Si on revient de la redirection et que c'est toujours vide
-          sessionStorage.removeItem('yt_sync_pending')
-          console.warn("[YT Simulator] ⚠️ La synchronisation automatique a échoué à récupérer le jeton Google.");
+        // Cas B : L'user a fait F5. Supabase n'a plus le token, on regarde dans NOTRE stockage
+        const savedToken = localStorage.getItem('yt_oauth_token')
+        
+        if (savedToken) {
+          console.log("[YT Simulator] 💾 Récupération du token depuis le localStorage secondaire !");
+          fetchYouTubeSubscriptions(savedToken)
         } else {
-          console.log("[YT Simulator] 🔄 Flag absent. Tentative de synchronisation silencieuse via signInWithOAuth...");
-          sessionStorage.setItem('yt_sync_pending', 'true')
-          setLoadingSubs(true)
-
-          await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: {
-              redirectTo: window.location.origin,
-              scopes: 'https://www.googleapis.com/auth/youtube.readonly',
-              queryParams: { prompt: 'none' }, 
-            },
-          })
+          console.warn("[YT Simulator] ❌ Utilisateur connecté mais aucun token Google trouvé. Reconnexion requise.");
         }
       }
     }
     
     checkUser()
 
+    // Écouteur de changement d'état (Utile pour capturer le token au tout premier clic de login)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log(`[YT Simulator] ⚡ onAuthStateChange déclenché - Événement: ${event}`, {
-        userPresent: !!session?.user,
-        providerTokenPresent: !!session?.provider_token,
-        tokenPrefix: session?.provider_token ? session.provider_token.substring(0, 10) + "..." : "aucun"
-      });
-
       setUser(session?.user ?? null)
+      
       if (session?.provider_token) {
-        console.log("[YT Simulator] 🎉 Jeton trouvé dans onAuthStateChange ! Nettoyage et chargement des abonnements...");
-        sessionStorage.removeItem('yt_sync_pending')
+        console.log(`[YT Simulator] ⚡ Événement Auth: ${event} -> Token détecté et sauvegardé.`);
+        localStorage.setItem('yt_oauth_token', session.provider_token)
         fetchYouTubeSubscriptions(session.provider_token)
       }
     })
 
-    return () => {
-      console.log("[YT Simulator] 🛑 Nettoyage du useEffect");
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
 
   // Récupération des vrais abonnements YouTube
   const fetchYouTubeSubscriptions = async (token: string) => {
-    console.log("[YT Simulator] 📥 fetchYouTubeSubscriptions appelé avec le token:", token.substring(0, 10) + "...");
     setLoadingSubs(true)
     try {
       const res = await fetch(
@@ -102,12 +74,16 @@ export default function Home() {
         { headers: { Authorization: `Bearer ${token}` } }
       )
       
-      console.log(`[YT Simulator] 📡 Réponse HTTP API YouTube: ${res.status} ${res.statusText}`);
-      
-      if (!res.ok) throw new Error(`Erreur API YouTube: ${res.status}`)
+      // Si l'API renvoie 401, c'est que le token a expiré (plus d'1h)
+      if (res.status === 401) {
+        console.warn("[YT Simulator] ⏰ Le token Google a expiré.")
+        localStorage.removeItem('yt_oauth_token')
+        return
+      }
+
+      if (!res.ok) throw new Error('Erreur API YouTube')
       
       const data = await res.json()
-      console.log(`[YT Simulator] 📋 Données YouTube reçues. Nombre d'items:`, data.items?.length || 0);
       
       const formattedSubs = data.items.map((item: any) => ({
         id: item.snippet.resourceId.channelId,
@@ -116,27 +92,31 @@ export default function Home() {
       }))
       
       setSubscriptions(formattedSubs)
+      console.log("[YT Simulator] 🎉 Abonnements chargés avec succès !");
     } catch (err) {
-      console.error("[YT Simulator] ❌ Erreur dans fetchYouTubeSubscriptions:", err)
+      console.error("[YT Simulator] Erreur lors du fetch YouTube :", err)
     } finally {
       setLoadingSubs(false)
     }
   }
 
   const loginWithGoogle = async () => {
-    console.log("[YT Simulator] 🔑 Clic sur Connexion manuelle Google");
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: window.location.origin,
         scopes: 'https://www.googleapis.com/auth/youtube.readonly',
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent' // Force l'obtention des droits au login initial
+        }
       },
     })
   }
 
   const handleLogout = async () => {
-    console.log("[YT Simulator] 🚪 Déconnexion de l'application");
-    sessionStorage.removeItem('yt_sync_pending')
+    console.log("[YT Simulator] 🚪 Déconnexion complète.");
+    localStorage.removeItem('yt_oauth_token')
     await supabase.auth.signOut()
     setSubscriptions([])
     setIsCascadeOpen(false)
