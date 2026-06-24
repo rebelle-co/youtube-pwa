@@ -13,6 +13,13 @@ interface YouTubeSubscription {
   thumbnail: string
 }
 
+interface YouTubeVideo {
+  id: string
+  title: string
+  thumbnail: string
+  publishedAt: string
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -22,6 +29,11 @@ export default function Home() {
   const [subscriptions, setSubscriptions] = useState<YouTubeSubscription[]>([])
   const [isCascadeOpen, setIsCascadeOpen] = useState(false)
   const [loadingSubs, setLoadingSubs] = useState(false)
+
+  // Nouveaux états pour récupérer les vidéos d'une chaîne
+  const [selectedChannel, setSelectedChannel] = useState<YouTubeSubscription | null>(null)
+  const [videos, setVideos] = useState<YouTubeVideo[]>([])
+  const [loadingVideos, setLoadingVideos] = useState(false)
 
   useEffect(() => {
     console.log("[YT Simulator] 🚀 Initialisation du composant");
@@ -62,6 +74,7 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Récupération des vrais abonnements YouTube
   const fetchYouTubeSubscriptions = async (token: string) => {
     setLoadingSubs(true)
     try {
@@ -95,6 +108,41 @@ export default function Home() {
     }
   }
 
+  // Récupération des vidéos d'une chaîne sélectionnée
+  const fetchVideosForChannel = async (channelId: string) => {
+    const token = localStorage.getItem('yt_oauth_token')
+    if (!token) return
+
+    setLoadingVideos(true)
+    try {
+      // Astuce magique : Remplacement de 'UC' par 'UU' pour choper la playlist d'uploads de la chaîne directement
+      const uploadsPlaylistId = 'UU' + channelId.substring(2)
+      
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=16`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+
+      if (!res.ok) throw new Error('Erreur API YouTube Videos')
+
+      const data = await res.json()
+      
+      const formattedVideos = data.items.map((item: any) => ({
+        id: item.snippet.resourceId.videoId,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '',
+        publishedAt: new Date(item.snippet.publishedAt).toLocaleDateString('fr-FR'),
+      }))
+
+      setVideos(formattedVideos)
+      console.log(`[YT Simulator] 📺 Vidéos de la chaîne chargées !`);
+    } catch (err) {
+      console.error("[YT Simulator] Erreur lors du fetch des vidéos :", err)
+    } finally {
+      setLoadingVideos(false)
+    }
+  }
+
   const loginWithGoogle = async () => {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -114,8 +162,10 @@ export default function Home() {
     localStorage.removeItem('yt_oauth_token')
     await supabase.auth.signOut()
     setSubscriptions([])
+    setVideos([])
+    setSelectedChannel(null)
     setIsCascadeOpen(false)
-    setActiveTab('accueil') // Reset sur l'accueil pour le prochain login
+    setActiveTab('accueil')
   }
 
   if (loading) {
@@ -158,8 +208,46 @@ export default function Home() {
 
         {activeTab === 'subscriptions' && (
           <section>
-            <h2 className="tab-title">Vos Abonnements</h2>
-            <p style={{ color: '#aaa', fontSize: '14px' }}>Sélectionnez une chaîne dans le menu du bas pour filtrer.</p>
+            {selectedChannel ? (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px', background: '#1a1a1a', padding: '15px', borderRadius: '12px', border: '1px solid #333' }}>
+                  <img src={selectedChannel.thumbnail} alt={selectedChannel.title} style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
+                  <div>
+                    <h2 style={{ margin: 0, fontSize: '20px' }}>{selectedChannel.title}</h2>
+                    <span style={{ color: '#e50914', fontSize: '12px', fontWeight: 'bold' }}>Flux extrait avec succès ✔</span>
+                  </div>
+                </div>
+
+                {loadingVideos ? (
+                  <div style={{ color: '#aaa', fontSize: '14px' }}>Extraction des flux médias bruts en cours...</div>
+                ) : videos.length === 0 ? (
+                  <div style={{ color: '#aaa', fontSize: '14px' }}>Aucune vidéo trouvée pour cette chaîne.</div>
+                ) : (
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', 
+                    gap: '20px' 
+                  }}>
+                    {videos.map((video) => (
+                      <div key={video.id} className="video-card" style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', border: '1px solid #333', cursor: 'pointer' }} onClick={() => console.log("Lecture de la vidéo :", video.id)}>
+                        <img src={video.thumbnail} alt={video.title} style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover' }} />
+                        <div style={{ padding: '12px' }}>
+                          <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#fff', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: '1.4' }}>
+                            {video.title}
+                          </h4>
+                          <span style={{ color: '#777', fontSize: '12px' }}>Publiée le {video.publishedAt}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <h2 className="tab-title">Vos Abonnements</h2>
+                <p style={{ color: '#aaa', fontSize: '14px' }}>Sélectionnez une chaîne dans le menu déroulant du bas pour voir ses vidéos.</p>
+              </>
+            )}
           </section>
         )}
 
@@ -243,7 +331,19 @@ export default function Home() {
               <div className="navbar-cascade-loading">Aucun abonnement trouvé</div>
             ) : (
               subscriptions.map((sub) => (
-                <div key={sub.id} className="nav-sub-item" onClick={() => console.log('Chaîne sélectionnée:', sub.id)}>
+                <div 
+                  key={sub.id} 
+                  className="nav-sub-item" 
+                  style={{ 
+                    background: selectedChannel?.id === sub.id ? '#333' : 'transparent',
+                    cursor: 'pointer' 
+                  }}
+                  onClick={() => {
+                    setActiveTab('subscriptions'); // Redirige vers l'onglet Abonnements
+                    setSelectedChannel(sub);       // Active le state de la chaine sélectionnée
+                    fetchVideosForChannel(sub.id); // Déclenche le fetch des vidéos
+                  }}
+                >
                   <img src={sub.thumbnail} alt={sub.title} className="nav-sub-avatar" />
                   <span className="nav-sub-name">{sub.title}</span>
                 </div>
