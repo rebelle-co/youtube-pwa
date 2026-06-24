@@ -248,6 +248,7 @@
     font-size: 14px;
     max-height: 48px;
     width: 100%;
+    min-height: 48px;
   }
   
   .nav-item.active {
@@ -346,6 +347,7 @@
     box-shadow: none;
     padding-left: 16px; /* Décale les chaînes vers la droite pour faire un effet d'arborescence */
     box-sizing: border-box;
+    scrollbar-width: none;
   }
   
   .navbar-cascade.open {
