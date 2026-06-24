@@ -30,7 +30,7 @@ export default function Home() {
   const [isCascadeOpen, setIsCascadeOpen] = useState(false)
   const [loadingSubs, setLoadingSubs] = useState(false)
 
-  // Nouveaux états pour récupérer les vidéos d'une chaîne
+  // États pour récupérer les vidéos d'une chaîne
   const [selectedChannel, setSelectedChannel] = useState<YouTubeSubscription | null>(null)
   const [videos, setVideos] = useState<YouTubeVideo[]>([])
   const [loadingVideos, setLoadingVideos] = useState(false)
@@ -74,33 +74,50 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Récupération des vrais abonnements YouTube
+  // Récupération de TOUS les abonnements YouTube via pagination
   const fetchYouTubeSubscriptions = async (token: string) => {
     setLoadingSubs(true)
     try {
-      const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=25&order=alphabetical`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      
-      if (res.status === 401) {
-        console.warn("[YT Simulator] ⏰ Le token Google a expiré.")
-        localStorage.removeItem('yt_oauth_token')
-        return
-      }
+      let allSubs: YouTubeSubscription[] = []
+      let nextPageToken = ''
+      let hasNextPage = true
 
-      if (!res.ok) throw new Error('Erreur API YouTube')
+      // Boucle tant qu'il y a des pages d'abonnements disponibles
+      while (hasNextPage) {
+        const pageParam = nextPageToken ? `&pageToken=${nextPageToken}` : ''
+        const res = await fetch(
+          `https://www.googleapis.com/youtube/v3/subscriptions?part=snippet&mine=true&maxResults=50&order=alphabetical${pageParam}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+        
+        if (res.status === 401) {
+          console.warn("[YT Simulator] ⏰ Le token Google a expiré.")
+          localStorage.removeItem('yt_oauth_token')
+          return
+        }
+
+        if (!res.ok) throw new Error('Erreur API YouTube')
+        
+        const data = await res.json()
+        
+        const formattedSubs = data.items.map((item: any) => ({
+          id: item.snippet.resourceId.channelId,
+          title: item.snippet.title,
+          thumbnail: item.snippet.thumbnails?.default?.url || '',
+        }))
+        
+        allSubs = [...allSubs, ...formattedSubs]
+
+        // Si l'API renvoie un token pour la page suivante, on continue, sinon on arrête
+        if (data.nextPageToken) {
+          nextPageToken = data.nextPageToken
+        } else {
+          hasNextPage = false
+        }
+      }
       
-      const data = await res.json()
-      
-      const formattedSubs = data.items.map((item: any) => ({
-        id: item.snippet.resourceId.channelId,
-        title: item.snippet.title,
-        thumbnail: item.snippet.thumbnails?.default?.url || '',
-      }))
-      
-      setSubscriptions(formattedSubs)
-      console.log("[YT Simulator] 🎉 Abonnements chargés avec succès !");
+      setSubscriptions(allSubs)
+      console.log(`[YT Simulator] 🎉 ${allSubs.length} abonnements chargés avec succès !`);
     } catch (err) {
       console.error("[YT Simulator] Erreur lors du fetch YouTube :", err)
     } finally {
@@ -115,7 +132,6 @@ export default function Home() {
 
     setLoadingVideos(true)
     try {
-      // Astuce magique : Remplacement de 'UC' par 'UU' pour choper la playlist d'uploads de la chaîne directement
       const uploadsPlaylistId = 'UU' + channelId.substring(2)
       
       const res = await fetch(
@@ -339,9 +355,9 @@ export default function Home() {
                     cursor: 'pointer' 
                   }}
                   onClick={() => {
-                    setActiveTab('subscriptions'); // Redirige vers l'onglet Abonnements
-                    setSelectedChannel(sub);       // Active le state de la chaine sélectionnée
-                    fetchVideosForChannel(sub.id); // Déclenche le fetch des vidéos
+                    setActiveTab('subscriptions');
+                    setSelectedChannel(sub);       
+                    fetchVideosForChannel(sub.id); 
                   }}
                 >
                   <img src={sub.thumbnail} alt={sub.title} className="nav-sub-avatar" />
