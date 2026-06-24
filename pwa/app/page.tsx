@@ -30,26 +30,30 @@ export default function Home() {
       setLoading(false)
 
       if (session?.provider_token) {
-        // Cas 1 : On a le token, on charge les chaînes en direct
+        // Cas 1 : On a le jeton Google, on nettoie les flags et on charge en direct
+        sessionStorage.removeItem('yt_sync_pending')
         fetchYouTubeSubscriptions(session.provider_token)
       } else if (session?.user) {
-        // Cas 2 : L'user est là, mais le token Google a disparu (réouverture du navigateur)
-        // On vérifie si on a déjà tenté une synchro automatique dans cet onglet
-        const hasSyncedThisSession = sessionStorage.getItem('yt_auto_synced')
+        // Cas 2 : L'utilisateur est connecté à Supabase mais le jeton Google est absent (F5 ou réouverture)
+        const isSyncPending = sessionStorage.getItem('yt_sync_pending')
 
-        if (!hasSyncedThisSession) {
-          // On marque qu'on tente la synchro pour éviter une boucle infinie au rechargement
-          sessionStorage.setItem('yt_auto_synced', 'true')
+        if (isSyncPending === 'true') {
+          // Si on revient tout juste de la redirection et que le token n'est toujours pas là,
+          // on arrête pour éviter une boucle infinie (ex: problème côté Google)
+          sessionStorage.removeItem('yt_sync_pending')
+          console.warn("La synchronisation automatique a échoué à récupérer le jeton Google.")
+        } else {
+          // On marque qu'on lance la synchronisation avant de rediriger
+          sessionStorage.setItem('yt_sync_pending', 'true')
           setLoadingSubs(true)
 
-          // Synchro silencieuse automatique ! 
-          // Google va valider la session et recharger la page instantanément avec un vrai token
+          // Micro-redirection silencieuse (invisible si l'utilisateur est déjà connecté à Google)
           await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
               redirectTo: window.location.origin,
               scopes: 'https://www.googleapis.com/auth/youtube.readonly',
-              queryParams: { prompt: 'none' }, 
+              queryParams: { prompt: 'none' }, // Demande à Google de valider en tâche de fond
             },
           })
         }
@@ -61,6 +65,7 @@ export default function Home() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
       if (session?.provider_token) {
+        sessionStorage.removeItem('yt_sync_pending')
         fetchYouTubeSubscriptions(session.provider_token)
       }
     })
@@ -96,7 +101,6 @@ export default function Home() {
   }
 
   const loginWithGoogle = async () => {
-    // Force la demande de consentement initiale pour s'assurer d'avoir les droits complets
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -107,7 +111,7 @@ export default function Home() {
   }
 
   const handleLogout = async () => {
-    sessionStorage.removeItem('yt_auto_synced') // On nettoie le flag au logout
+    sessionStorage.removeItem('yt_sync_pending')
     await supabase.auth.signOut()
     setSubscriptions([])
     setIsCascadeOpen(false)
@@ -149,7 +153,6 @@ export default function Home() {
             <p style={{ color: '#aaa', fontSize: '14px' }}>Ici s'affichera la grille principale.</p>
           </section>
         )}
-        {/* ... Garde tes autres onglets (downloads, subscriptions, profile) ici à l'identique ... */}
       </main>
 
       {/* ─── NAVBAR AVEC ACCORDÉON INTÉGRÉ ─── */}
@@ -207,7 +210,7 @@ export default function Home() {
               style={{ 
                 borderRadius: '50%', 
                 objectFit: 'cover',
-                width: '24px',   /* Aligne la taille sur tes autres icônes SVGs */
+                width: '24px',
                 height: '24px' 
               }} 
             />
