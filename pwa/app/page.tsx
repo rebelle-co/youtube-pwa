@@ -148,35 +148,9 @@ export default function Home() {
         {activeTab === 'subscriptions' && (
           <section>
             <h2 className="tab-title">Abonnements</h2>
-            <p style={{ color: '#aaa', fontSize: '14px', marginBottom: '24px' }}>
-              Parcourez les chaînes synchronisées en direct depuis votre compte Google.
+            <p style={{ color: '#aaa', fontSize: '14px' }}>
+              Vue globale ou gestion avancée de vos abonnements.
             </p>
-
-            {/* ─── CASCADE OUVRABLE / REFERMABLE ─── */}
-            <div className="cascade-container">
-              <button 
-                className="cascade-header" 
-                onClick={() => setIsCascadeOpen(!isCascadeOpen)}
-              >
-                <span>📁 Mes chaînes suivies ({subscriptions.length})</span>
-                <span className={`cascade-arrow ${isCascadeOpen ? 'open' : ''}`}>▼</span>
-              </button>
-              
-              <div className={`cascade-content ${isCascadeOpen ? 'open' : ''}`}>
-                {loadingSubs ? (
-                  <div className="cascade-loading">Synchronisation avec YouTube...</div>
-                ) : subscriptions.length === 0 ? (
-                  <div className="cascade-loading">Aucun abonnement trouvé.</div>
-                ) : (
-                  subscriptions.map((sub) => (
-                    <div key={sub.id} className="sub-item">
-                      <img src={sub.thumbnail} alt={sub.title} className="sub-avatar" />
-                      <span className="sub-name">{sub.title}</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
           </section>
         )}
 
@@ -200,24 +174,52 @@ export default function Home() {
 
       </main>
 
-      {/* NAVBAR */}
+      {/* ─── NAVBAR AVEC ACCORDÉON INTÉGRÉ ─── */}
       <nav className="navbar">
-        <button onClick={() => setActiveTab('accueil')} className={`nav-item ${activeTab === 'accueil' ? 'active' : ''}`}>
+        <button onClick={() => { setActiveTab('accueil'); setIsCascadeOpen(false); }} className={`nav-item ${activeTab === 'accueil' ? 'active' : ''}`}>
           <svg className="nav-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
           <span>Accueil</span>
         </button>
 
-        <button onClick={() => setActiveTab('subscriptions')} className={`nav-item ${activeTab === 'subscriptions' ? 'active' : ''}`}>
-          <svg className="nav-icon" viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V4c0-1.1-.9-2-2-2zm-1 7h-2v2h-2V9h-2V7h2V5h2v2h2v2z"/></svg>
-          <span>Abonnements</span>
-        </button>
+        {/* CONTENEUR DU BOUTON ABONNEMENT + SA CASCADE */}
+        <div className="nav-item-wrapper">
+          <button 
+            onClick={() => {
+              setActiveTab('subscriptions');
+              setIsCascadeOpen(!isCascadeOpen); // Ouvre ou ferme la cascade au clic
+            }} 
+            className={`nav-item ${activeTab === 'subscriptions' ? 'active' : ''}`}
+            style={{ width: '100%' }}
+          >
+            <svg className="nav-icon" viewBox="0 0 24 24">
+              <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V4c0-1.1-.9-2-2-2zm-1 7h-2v2h-2V9h-2V7h2V5h2v2h2v2z"/>
+            </svg>
+            <span>Abonnements {isCascadeOpen ? '▲' : '▼'}</span>
+          </button>
 
-        <button onClick={() => setActiveTab('downloads')} className={`nav-item ${activeTab === 'downloads' ? 'active' : ''}`}>
+          {/* LA CASCADE DE CHAÎNES DIRECTEMENT ICI */}
+          <div className={`navbar-cascade ${isCascadeOpen ? 'open' : ''}`}>
+            {loadingSubs ? (
+              <div className="navbar-cascade-loading">Chargement...</div>
+            ) : subscriptions.length === 0 ? (
+              <div className="navbar-cascade-loading">Aucun abonnement</div>
+            ) : (
+              subscriptions.map((sub) => (
+                <div key={sub.id} className="nav-sub-item" onClick={() => console.log('Chaîne sélectionnée:', sub.id)}>
+                  <img src={sub.thumbnail} alt={sub.title} className="nav-sub-avatar" />
+                  <span className="nav-sub-name">{sub.title}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <button onClick={() => { setActiveTab('downloads'); setIsCascadeOpen(false); }} className={`nav-item ${activeTab === 'downloads' ? 'active' : ''}`}>
           <svg className="nav-icon" viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
           <span>Téléchargements</span>
         </button>
 
-        <button onClick={() => setActiveTab('profile')} className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}>
+        <button onClick={() => { setActiveTab('profile'); setIsCascadeOpen(false); }} className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}>
           <svg className="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5c0-4.71 3.95-6.2 6-6.2s8.5 1.49 8.5 4.2c0 1.71-1.39 3-3 3h-11.5z"/></svg>
           <span>Vous</span>
         </button>

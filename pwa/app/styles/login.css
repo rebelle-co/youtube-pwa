@@ -256,87 +256,62 @@
   }
 }
 
-/* Conteneur global de la cascade d'abonnements */
-.cascade-container {
-  width: 100%;
-  max-width: 400px;
-  background-color: #171717;
-  border: 1px solid #222222;
-  border-radius: 16px;
-  overflow: hidden;
-  margin-top: 16px;
-}
+/* --- CASCADE INTÉGRÉE À LA NAVBAR --- */
 
-/* En-tête cliquable pour ouvrir/fermer */
-.cascade-header {
-  width: 100%;
-  padding: 16px;
-  background-color: #1f1f1f;
-  border: none;
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 600;
+/* Wrapper pour englober le bouton et sa cascade */
+.nav-item-wrapper {
+  position: relative;
+  flex: 1;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  cursor: pointer;
-  transition: background-color 0.2s;
+  justify-content: center;
+  height: 100%;
 }
 
-.cascade-header:hover {
-  background-color: #2a2a2a;
-}
-
-/* Flèche rotative */
-.cascade-arrow {
-  font-size: 12px;
-  transition: transform 0.3s ease;
-}
-
-.cascade-arrow.open {
-  transform: rotate(180deg);
-}
-
-/* Liste interne */
-.cascade-content {
+/* Conteneur de la cascade */
+.navbar-cascade {
+  position: fixed;
+  bottom: 64px; /* Se place juste au-dessus de la navbar mobile */
+  left: 0;
+  width: 100vw;
+  background-color: #141414;
+  border-top: 1px solid #212121;
   max-height: 0;
   overflow-y: auto;
-  transition: max-height 0.3s ease-out;
-  background-color: #141414;
+  transition: max-height 0.3s ease-in-out;
+  z-index: 99;
+  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.5);
 }
 
-.cascade-content.open {
-  max-height: 320px; /* Hauteur max de la liste déroulante avant scroll */
+/* Quand la cascade est ouverte */
+.navbar-cascade.open {
+  max-height: 300px; 
 }
 
-/* Élément de chaîne (Abonnement) */
-.sub-item {
+/* Un élément (chaîne) dans la cascade de la navbar */
+.nav-sub-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 16px;
-  border-bottom: 1px solid #1f1f1f;
-  transition: background-color 0.15s;
+  padding: 12px 20px;
+  border-bottom: 1px solid #1c1c1c;
   cursor: pointer;
+  transition: background-color 0.15s;
 }
 
-.sub-item:hover {
-  background-color: #1c1c1c;
+.nav-sub-item:hover {
+  background-color: #212121;
 }
 
-.sub-item:last-child {
-  border-bottom: none;
-}
-
-.sub-avatar {
-  width: 32px;
-  height: 32px;
+.nav-sub-avatar {
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   object-fit: cover;
-  background-color: #222222;
 }
 
-.sub-name {
+.nav-sub-name {
   font-size: 13px;
   font-weight: 500;
   color: #eeeeee;
@@ -345,10 +320,41 @@
   text-overflow: ellipsis;
 }
 
-/* Indicateur de chargement interne */
-.cascade-loading {
-  padding: 20px;
+.navbar-cascade-loading {
+  padding: 16px;
   text-align: center;
-  color: #666666;
-  font-size: 13px;
+  color: #777777;
+  font-size: 12px;
+}
+
+/* --- AJUSTEMENTS POUR LE MODE PC (DESKTOP) --- */
+@media (min-width: 768px) {
+  .nav-item-wrapper {
+    flex: none;
+    width: 100%;
+    height: auto;
+    align-items: flex-start;
+  }
+
+  .navbar-cascade {
+    position: relative; /* S'intègre dans le flux de la colonne */
+    bottom: auto;
+    left: auto;
+    width: 100%;
+    border-top: none;
+    background-color: #0f0f0f;
+    box-shadow: none;
+    padding-left: 16px; /* Décale les chaînes vers la droite pour faire un effet d'arborescence */
+    box-sizing: border-box;
+  }
+  
+  .navbar-cascade.open {
+    max-height: 350px; /* S'étend vers le bas */
+  }
+
+  .nav-sub-item {
+    padding: 8px 12px;
+    border-bottom: none;
+    border-radius: 8px;
+  }
 }
