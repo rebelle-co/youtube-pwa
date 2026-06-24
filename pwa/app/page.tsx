@@ -30,7 +30,29 @@ export default function Home() {
       setLoading(false)
 
       if (session?.provider_token) {
+        // Cas 1 : On a le token, on charge les chaînes en direct
         fetchYouTubeSubscriptions(session.provider_token)
+      } else if (session?.user) {
+        // Cas 2 : L'user est là, mais le token Google a disparu (réouverture du navigateur)
+        // On vérifie si on a déjà tenté une synchro automatique dans cet onglet
+        const hasSyncedThisSession = sessionStorage.getItem('yt_auto_synced')
+
+        if (!hasSyncedThisSession) {
+          // On marque qu'on tente la synchro pour éviter une boucle infinie au rechargement
+          sessionStorage.setItem('yt_auto_synced', 'true')
+          setLoadingSubs(true)
+
+          // Synchro silencieuse automatique ! 
+          // Google va valider la session et recharger la page instantanément avec un vrai token
+          await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: window.location.origin,
+              scopes: 'https://www.googleapis.com/auth/youtube.readonly',
+              queryParams: { prompt: 'none' }, 
+            },
+          })
+        }
       }
     }
     
@@ -46,7 +68,7 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Récupération des vrais abonnements YouTube de l'utilisateur
+  // Récupération des vrais abonnements YouTube
   const fetchYouTubeSubscriptions = async (token: string) => {
     setLoadingSubs(true)
     try {
@@ -67,20 +89,14 @@ export default function Home() {
       
       setSubscriptions(formattedSubs)
     } catch (err) {
-      console.warn("API YouTube bloquée ou token expiré. Chargement des données de test.")
-      // Données de secours (Mock) pour le développement
-      setSubscriptions([
-        { id: 'ch1', title: 'Lofi Girl', thumbnail: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80' },
-        { id: 'ch2', title: 'DevCode Master', thumbnail: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80' },
-        { id: 'ch3', title: 'Iron Workout', thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80' },
-        { id: 'ch4', title: 'Tech Horizon', thumbnail: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80' }
-      ])
+      console.warn("API YouTube bloquée ou token expiré.")
     } finally {
       setLoadingSubs(false)
     }
   }
 
   const loginWithGoogle = async () => {
+    // Force la demande de consentement initiale pour s'assurer d'avoir les droits complets
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -91,6 +107,7 @@ export default function Home() {
   }
 
   const handleLogout = async () => {
+    sessionStorage.removeItem('yt_auto_synced') // On nettoie le flag au logout
     await supabase.auth.signOut()
     setSubscriptions([])
     setIsCascadeOpen(false)
@@ -111,7 +128,7 @@ export default function Home() {
           <div className="site-brand"><span>🔻</span> YT Premium Simulator</div>
           <h2 className="site-title">L'expérience de streaming, purifiée.</h2>
           <p className="site-description">
-            Cette application modifie la réception de vos flux vidéo en extrayant uniquement le contenu média brut de vos abonnements. En contournant les scripts natifs des lecteurs tiers, elle neutralise l'affichage des publicités et active de façon fluide l'écoute en arrière-plan, le maintien audio écran éteint (MediaSession API) ainsi que la mise en cache locale pour vos playlists hors-ligne.
+            Cette application modifie la réception de vos flux vidéo en extrayant uniquement le contenu média brut de vos abonnements.
           </p>
           <button onClick={loginWithGoogle} className="btn-google">
             <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="google-icon" />
@@ -126,52 +143,13 @@ export default function Home() {
     <div className="app-container">
       
       <main className="tab-content">
-        
         {activeTab === 'accueil' && (
           <section>
             <h2 className="tab-title">Accueil</h2>
-            <p style={{ color: '#aaa', fontSize: '14px' }}>
-              Ici s'affichera la grille principale avec barre de recherche et vidéos tendances.
-            </p>
+            <p style={{ color: '#aaa', fontSize: '14px' }}>Ici s'affichera la grille principale.</p>
           </section>
         )}
-
-        {activeTab === 'downloads' && (
-          <section>
-            <h2 className="tab-title">Téléchargements</h2>
-            <p style={{ color: '#aaa', fontSize: '14px' }}>
-              Vos musiques et vidéos enregistrées localement (Mode Hors-ligne).
-            </p>
-          </section>
-        )}
-
-        {activeTab === 'subscriptions' && (
-          <section>
-            <h2 className="tab-title">Abonnements</h2>
-            <p style={{ color: '#aaa', fontSize: '14px' }}>
-              Vue globale ou gestion avancée de vos abonnements.
-            </p>
-          </section>
-        )}
-
-        {activeTab === 'profile' && (
-          <section style={{ maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <h2 className="tab-title">Vous</h2>
-            <div className="user-profile">
-              {user.user_metadata.avatar_url && (
-                <img src={user.user_metadata.avatar_url} alt="Avatar" className="user-avatar" />
-              )}
-              <div className="user-info">
-                <h3>{user.user_metadata.full_name}</h3>
-                <p style={{ margin: '4px 0 0 0' }}>{user.email}</p>
-              </div>
-            </div>
-            <button onClick={handleLogout} className="btn-logout" style={{ width: '100%', marginTop: '16px' }}>
-              Fermer la session (Déconnexion)
-            </button>
-          </section>
-        )}
-
+        {/* ... Garde tes autres onglets (downloads, subscriptions, profile) ici à l'identique ... */}
       </main>
 
       {/* ─── NAVBAR AVEC ACCORDÉON INTÉGRÉ ─── */}
@@ -181,12 +159,11 @@ export default function Home() {
           <span>Accueil</span>
         </button>
 
-        {/* CONTENEUR DU BOUTON ABONNEMENT + SA CASCADE */}
         <div className="nav-item-wrapper">
           <button 
             onClick={() => {
               setActiveTab('subscriptions');
-              setIsCascadeOpen(!isCascadeOpen); // Ouvre ou ferme la cascade au clic
+              setIsCascadeOpen(!isCascadeOpen);
             }} 
             className={`nav-item ${activeTab === 'subscriptions' ? 'active' : ''}`}
             style={{ width: '100%' }}
@@ -197,12 +174,11 @@ export default function Home() {
             <span>Abonnements {isCascadeOpen ? '▲' : '▼'}</span>
           </button>
 
-          {/* LA CASCADE DE CHAÎNES DIRECTEMENT ICI */}
           <div className={`navbar-cascade ${isCascadeOpen ? 'open' : ''}`}>
             {loadingSubs ? (
-              <div className="navbar-cascade-loading">Chargement...</div>
+              <div className="navbar-cascade-loading">Mise à jour automatique...</div>
             ) : subscriptions.length === 0 ? (
-              <div className="navbar-cascade-loading">Aucun abonnement</div>
+              <div className="navbar-cascade-loading">Aucun abonnement trouvé</div>
             ) : (
               subscriptions.map((sub) => (
                 <div key={sub.id} className="nav-sub-item" onClick={() => console.log('Chaîne sélectionnée:', sub.id)}>
@@ -219,8 +195,27 @@ export default function Home() {
           <span>Téléchargements</span>
         </button>
 
-        <button onClick={() => { setActiveTab('profile'); setIsCascadeOpen(false); }} className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}>
-          <svg className="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5c0-4.71 3.95-6.2 6-6.2s8.5 1.49 8.5 4.2c0 1.71-1.39 3-3 3h-11.5z"/></svg>
+        <button 
+          onClick={() => { setActiveTab('profile'); setIsCascadeOpen(false); }} 
+          className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+        >
+          {user?.user_metadata?.avatar_url ? (
+            <img 
+              src={user.user_metadata.avatar_url} 
+              alt="Mon profil" 
+              className="nav-icon" 
+              style={{ 
+                borderRadius: '50%', 
+                objectFit: 'cover',
+                width: '24px',   /* Aligne la taille sur tes autres icônes SVGs */
+                height: '24px' 
+              }} 
+            />
+          ) : (
+            <svg className="nav-icon" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5c0-4.71 3.95-6.2 6-6.2s8.5 1.49 8.5 4.2c0 1.71-1.39 3-3 3h-11.5z"/>
+            </svg>
+          )}
           <span>Vous</span>
         </button>
       </nav>
