@@ -7,6 +7,7 @@ import './styles/login.css'
 
 type TabType = 'accueil' | 'downloads' | 'subscriptions' | 'profile'
 type SubTabType = 'standard' | 'shorts'
+type FilterType = 'recent' | 'popular' | 'old'
 
 interface YouTubeSubscription {
   id: string
@@ -21,6 +22,61 @@ interface YouTubeVideo {
   publishedAt: string     // Version lisible (ex: "25/06/2026")
   rawPublishedAt: string  // Version ISO pour le tri (ex: "2026-06-25T09:00:00Z")
   type: SubTabType
+  duration?: string       // Formatée (ex: "14:22")
+  viewCount?: number      // Nombre brut pour le tri populaire
+}
+
+// FORMATTEUR DE TEMPS RELATIF
+const getRelativeTime = (isoString: string): string => {
+  if (!isoString) return "à l'instant"
+  const now = new Date()
+  const past = new Date(isoString)
+  const diffMs = now.getTime() - past.getTime()
+  if (diffMs < 0) return "à l'instant"
+
+  const diffSecs = Math.floor(diffMs / 1000)
+  const diffMins = Math.floor(diffSecs / 60)
+  const diffHours = Math.floor(diffMins / 60)
+  const diffDays = Math.floor(diffHours / 24)
+  const diffWeeks = Math.floor(diffDays / 7)
+  const diffMonths = Math.floor(diffDays / 30.416)
+  const diffYears = Math.floor(diffDays / 365.25)
+
+  if (diffSecs < 60) return diffSecs <= 1 ? "à l'instant" : `${diffSecs} seconde${diffSecs > 1 ? 's' : ''}`
+  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''}`
+  if (diffHours < 24) return `${diffHours} heure${diffHours > 1 ? 's' : ''}`
+  if (diffDays < 7) return `${diffDays} jour${diffDays > 1 ? 's' : ''}`
+  if (diffWeeks < 4) return `${diffWeeks} semaine${diffWeeks > 1 ? 's' : ''}`
+  if (diffMonths < 12) return `${diffMonths} mois`
+  return `${diffYears} année${diffYears > 1 ? 's' : ''}`
+}
+
+// FORMATTEUR DE DURÉE ISO 8601 (Ex: PT1H23M45S -> 1:23:45)
+const parseISODuration = (isoDuration: string): string => {
+  if (!isoDuration) return ''
+  const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/)
+  if (!match) return ''
+  const hours = match[1] ? parseInt(match[1], 10) : 0
+  const minutes = match[2] ? parseInt(match[2], 10) : 0
+  const seconds = match[3] ? parseInt(match[3], 10) : 0
+
+  const parts = []
+  if (hours > 0) {
+    parts.push(hours)
+    parts.push(minutes.toString().padStart(2, '0'))
+  } else {
+    parts.push(minutes)
+  }
+  parts.push(seconds.toString().padStart(2, '0'))
+  return parts.join(':')
+}
+
+// FORMATTEUR DU COMPTEUR DE VUES COMPACT
+const formatViews = (views?: number): string => {
+  if (!views) return '0 vue'
+  if (views >= 1000000) return `${(views / 1000000).toFixed(1).replace('.', ' ')} M de vues`
+  if (views >= 1000) return `${(views / 1000).toFixed(0)} k vues`
+  return `${views} vue${views > 1 ? 's' : ''}`
 }
 
 export default function Home() {
@@ -29,17 +85,20 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<TabType>('accueil')
   const [activeSubTab, setActiveSubTab] = useState<SubTabType>('standard')
   
-  // États pour la cascade d'abonnements
+  // États de filtrage désynchronisés (Chaque onglet possède son propre état de tri indépendant)
+  const [filters, setFilters] = useState<Record<SubTabType, FilterType>>({
+    standard: 'recent',
+    shorts: 'recent'
+  })
+
   const [subscriptions, setSubscriptions] = useState<YouTubeSubscription[]>([])
   const [isCascadeOpen, setIsCascadeOpen] = useState(false)
   const [loadingSubs, setLoadingSubs] = useState(false)
 
-  // États pour récupérer les vidéos d'une chaîne
   const [selectedChannel, setSelectedChannel] = useState<YouTubeSubscription | null>(null)
   const [videos, setVideos] = useState<YouTubeVideo[]>([])
   const [loadingVideos, setLoadingVideos] = useState(false)
 
-  // Centralisation et nettoyage du cycle de vie de l'authentification
   useEffect(() => {
     console.log("[YT Simulator] 🚀 Initialisation du composant");
 
@@ -86,7 +145,6 @@ export default function Home() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Récupération de TOUS les abonnements YouTube via pagination
   const fetchYouTubeSubscriptions = async (token: string) => {
     setLoadingSubs(true)
     try {
@@ -136,7 +194,6 @@ export default function Home() {
     }
   }
 
-  // Conservé pour ne rien casser, mais remplacé par la validation serveur en temps réel
   const checkIfShort = (isoDuration: string): boolean => {
     if (!isoDuration || isoDuration.includes('H')) return false 
     const minutesMatch = isoDuration.match(/(\d+)M/)
@@ -146,7 +203,6 @@ export default function Home() {
     return (minutes * 60) + seconds <= 60
   }
 
-  // Récupération optimisée : Comparaison de totaux -> Cache direct -> Complétion de l'historique ou des nouveautés
   const fetchVideosForChannel = async (channelId: string, channelThumbnail?: string) => {
     setLoadingVideos(true)
     try {
@@ -156,7 +212,6 @@ export default function Home() {
         return
       }
 
-      // 1. CHARGEMENT IMMÉDIAT DE LA DB (Affichage instantané pour l'utilisateur)
       console.log(`[YT Simulator] 🔍 Récupération des vidéos existantes en DB pour le canal ${channelId}...`);
       const { data: cachedVideos, error: dbError } = await supabase
         .from('videos')
@@ -169,14 +224,15 @@ export default function Home() {
         thumbnail: v.thumbnail_url,
         publishedAt: new Date(v.published_at).toLocaleDateString('fr-FR'),
         rawPublishedAt: v.published_at,
-        type: (v.type || 'standard') as SubTabType
+        type: (v.type || 'standard') as SubTabType,
+        duration: parseISODuration(v.duration),
+        viewCount: v.view_count || 0
       })) : []
 
-      // Tri chronologique immédiat
+      // Tri par défaut chronologique
       formattedCached.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
       setVideos(formattedCached)
 
-      // 2. VÉRIFICATION DU COMPTEUR TOTAL DE LA CHAÎNE
       console.log(`[YT Simulator] 🛰️ Vérification des compteurs de vidéos...`);
       const channelStatsRes = await fetch(
         `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}`,
@@ -197,14 +253,12 @@ export default function Home() {
 
       console.log(`[YT Simulator] 📊 Comparatif Totaux -> YouTube: ${ytVideoCount} | Base de données: ${dbVideoCount}`);
 
-      // CONDITION DE SORTIE : Si la DB est synchro avec YouTube, on stoppe TOUT ici ! (Zéro fetch de playlist)
       if (ytVideoCount === dbVideoCount) {
         console.log(`[YT Simulator] ✅ Synchro parfaite détectée (${ytVideoCount} vidéos). Rendu basé sur la DB locale.`);
         setLoadingVideos(false)
         return
       }
 
-      // 3. PARCOURS DE TOUTES LES PAGES (Uniquement s'il y a une différence pour combler les trous)
       console.log(`[YT Simulator] 🔄 Différence détectée. Récupération de la liste complète pour synchronisation...`);
       const uploadsPlaylistId = 'UU' + channelId.substring(2)
       let allPlaylistVideoIds: string[] = []
@@ -236,13 +290,11 @@ export default function Home() {
         return
       }
 
-      // 4. FILTRAGE DES VIDÉOS RÉELLEMENT MANQUANTES (Anciennes ou nouvelles)
       const cachedIdsSet = new Set(formattedCached.map(v => v.id))
       const missingVideoIds = allPlaylistVideoIds.filter(id => !cachedIdsSet.has(id))
 
       console.log(`[YT Simulator] 📊 Résultat : ${missingVideoIds.length} vidéos manquantes à intégrer.`);
 
-      // 5. FETCH PROGRESSIF ET INJECTION À LA VOLÉE
       if (missingVideoIds.length > 0) {
         for (let i = 0; i < missingVideoIds.length; i += 50) {
           const chunk = missingVideoIds.slice(i, i + 50)
@@ -256,7 +308,6 @@ export default function Home() {
           if (detailsRes.ok) {
             const detailsData = await detailsRes.json()
 
-            // Classification via ton API locale
             const classificationRes = await fetch('/api/classify-videos', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -298,17 +349,17 @@ export default function Home() {
                 thumbnail: thumbnail,
                 publishedAt: new Date(item.snippet.publishedAt).toLocaleDateString('fr-FR'),
                 rawPublishedAt: item.snippet.publishedAt,
-                type: finalType
+                type: finalType,
+                duration: parseISODuration(item.contentDetails?.duration),
+                viewCount: item.statistics?.viewCount ? parseInt(item.statistics.viewCount, 10) : 0
               })
             })
 
-            // Écriture en arrière-plan
             if (dbInserts.length > 0) {
               const { error: upsertError } = await supabase.from('videos').upsert(dbInserts)
               if (upsertError) console.error("[YT Simulator] Erreur insertion Supabase :", upsertError)
             }
 
-            // Injection progressive dans la grille sans casser le rendu actuel
             setVideos((prevVideos) => {
               const newCombined = [...prevVideos, ...formattedChunk]
               return newCombined.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
@@ -377,7 +428,22 @@ export default function Home() {
     )
   }
 
-  const filteredVideos = videos.filter(video => video.type === activeSubTab)
+  // Filtrage par type (standard / shorts) PUIS application du tri désynchronisé
+  const currentFilter = filters[activeSubTab]
+  const processedVideos = videos
+    .filter(video => video.type === activeSubTab)
+    .sort((a, b) => {
+      if (currentFilter === 'recent') {
+        return new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime()
+      }
+      if (currentFilter === 'old') {
+        return new Date(a.rawPublishedAt).getTime() - new Date(b.rawPublishedAt).getTime()
+      }
+      if (currentFilter === 'popular') {
+        return (b.viewCount || 0) - (a.viewCount || 0)
+      }
+      return 0
+    })
 
   return (
     <div className="app-container">
@@ -403,7 +469,8 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '20px', marginBottom: '25px', borderBottom: '1px solid #222' }}>
+                {/* Sub-tabs d'onglets de types */}
+                <div style={{ display: 'flex', gap: '20px', marginBottom: '15px', borderBottom: '1px solid #222' }}>
                   <button 
                     onClick={() => setActiveSubTab('standard')} 
                     style={{
@@ -438,9 +505,63 @@ export default function Home() {
                   </button>
                 </div>
 
-                {loadingVideos && filteredVideos.length === 0 ? (
+                {/* LIGNE DE FILTRAGE SUR LA MÊME LIGNE ET DÉSYNCHRONISÉE */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '20px',
+                  padding: '0 4px',
+                  fontFamily: 'Roboto, "Arial", sans-serif',
+                  fontSize: '13px'
+                }}>
+                  <button 
+                    onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'recent' }))}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: currentFilter === 'recent' ? '#fff' : '#666',
+                      fontWeight: currentFilter === 'recent' ? 'bold' : 'normal',
+                      cursor: 'pointer',
+                      padding: '5px 0',
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    Les plus récentes
+                  </button>
+                  <button 
+                    onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'popular' }))}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: currentFilter === 'popular' ? '#fff' : '#666',
+                      fontWeight: currentFilter === 'popular' ? 'bold' : 'normal',
+                      cursor: 'pointer',
+                      padding: '5px 0',
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    Populaires
+                  </button>
+                  <button 
+                    onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'old' }))}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: currentFilter === 'old' ? '#fff' : '#666',
+                      fontWeight: currentFilter === 'old' ? 'bold' : 'normal',
+                      cursor: 'pointer',
+                      padding: '5px 0',
+                      fontFamily: 'inherit'
+                    }}
+                  >
+                    Les plus anciennes
+                  </button>
+                </div>
+
+                {loadingVideos && processedVideos.length === 0 ? (
                   <div style={{ color: '#aaa', fontSize: '14px' }}>Extraction et classification des flux médias bruts...</div>
-                ) : filteredVideos.length === 0 ? (
+                ) : processedVideos.length === 0 ? (
                   <div style={{ color: '#aaa', fontSize: '14px' }}>Aucun contenu disponible dans cette catégorie.</div>
                 ) : (
                   <div style={{ 
@@ -450,36 +571,72 @@ export default function Home() {
                       : 'repeat(auto-fill, minmax(260px, 1fr))', 
                     gap: '20px' 
                   }}>
-                    {filteredVideos.map((video) => (
+                    {processedVideos.map((video) => (
                       <div 
                         key={video.id} 
                         className="video-card" 
                         style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', border: '1px solid #333', cursor: 'pointer' }} 
                         onClick={() => console.log("Lecture de la vidéo :", video.id)}
                       >
-                        <img 
-                          src={video.thumbnail} 
-                          alt={video.title} 
-                          style={{ 
-                            width: '100%', 
-                            aspectRatio: activeSubTab === 'shorts' ? '9/16' : '16/9', 
-                            objectFit: 'cover' 
-                          }} 
-                        />
+                        {/* Wrapper de la miniature pour superposer le temps absolu */}
+                        <div style={{ position: 'relative', width: '100%', aspectRatio: activeSubTab === 'shorts' ? '9/16' : '16/9' }}>
+                          <img 
+                            src={video.thumbnail} 
+                            alt={video.title} 
+                            style={{ 
+                              width: '100%', 
+                              height: '100%',
+                              objectFit: 'cover' 
+                            }} 
+                          />
+                          {video.duration && (
+                            <span style={{
+                              position: 'absolute',
+                              bottom: '6px',
+                              right: '6px',
+                              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                              color: '#fff',
+                              padding: '3px 6px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: '500',
+                              fontFamily: 'Roboto, "Arial", sans-serif'
+                            }}>
+                              {video.duration}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Conteneur des textes */}
                         <div style={{ padding: '12px' }}>
                           <h4 style={{ 
-                            margin: '0 0 8px 0', 
+                            margin: '0 0 6px 0', 
                             fontSize: '13px', 
                             color: '#fff', 
+                            fontFamily: 'Roboto, "Arial", sans-serif',
                             display: '-webkit-box', 
                             WebkitLineClamp: 2, 
                             WebkitBoxOrient: 'vertical', 
                             overflow: 'hidden', 
+                            textOverflow: 'ellipsis',
                             lineHeight: '1.4' 
                           }}>
                             {video.title}
                           </h4>
-                          <span style={{ color: '#777', fontSize: '11px' }}>{video.publishedAt}</span>
+                          
+                          {/* Ligne d'infos complémentaires alignées sur la même ligne */}
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '6px', 
+                            color: '#777', 
+                            fontSize: '11px',
+                            fontFamily: 'Roboto, "Arial", sans-serif' 
+                          }}>
+                            <span>{formatViews(video.viewCount)}</span>
+                            <span style={{ fontSize: '8px', color: '#444' }}>●</span>
+                            <span>{getRelativeTime(video.rawPublishedAt)}</span>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -584,7 +741,7 @@ export default function Home() {
                   }}
                   onClick={() => {
                     setActiveTab('subscriptions');
-                    setSelectedChannel(sub);       
+                    setSelectedChannel(sub);      
                     fetchVideosForChannel(sub.id, sub.thumbnail);
                     setActiveSubTab('standard'); 
                   }}
