@@ -7,6 +7,9 @@ import { YouTubeSubscription } from '../types/youtube'
 import "./../styles/login.css"
 
 export default function Navbar({ isOpen }: { isOpen: boolean }) {
+  const context = useAppContext();
+  if (!context) return null;
+
   const [isCascadeOpen, setIsCascadeOpen] = useState(false)
   const router = useRouter()
   const { subscriptions, fetchVideosForChannel, setSelectedChannel, setActiveSubTab } = useAppContext()
