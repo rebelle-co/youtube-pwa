@@ -6,7 +6,7 @@ import { useAppContext } from '../context/AppContext'
 import { YouTubeSubscription } from '../types/youtube'
 import "./../styles/login.css"
 
-export default function Navbar() {
+export default function Navbar({ isOpen }: { isOpen: boolean }) {
   const [isCascadeOpen, setIsCascadeOpen] = useState(false)
   const router = useRouter()
   const { subscriptions, fetchVideosForChannel, setSelectedChannel, setActiveSubTab } = useAppContext()
@@ -21,7 +21,7 @@ export default function Navbar() {
   }
 
   return (
-    <nav className="navbar">
+    <nav className={`navbar ${isOpen ? 'expanded' : 'mini'}`}>
       <button 
         onClick={() => {
           router.push('/');

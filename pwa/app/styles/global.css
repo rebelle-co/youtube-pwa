@@ -44,3 +44,48 @@
 .nav-closed .navbar { display: none; }
 .nav-open .navbar { width: 240px; }
 .main-content { flex: 1; padding: 20px; width: "auto"; }
+
+
+/* Configuration du conteneur parent */
+.app-container {
+  display: flex;
+  transition: all 0.3s ease;
+}
+
+/* État Mini */
+.navbar.mini {
+  width: 72px; /* Largeur réduite */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.navbar.mini .nav-item {
+  flex-direction: column; /* Icône au dessus */
+  padding: 16px 0;
+}
+
+.navbar.mini .nav-text {
+  font-size: 10px; /* Petit texte */
+  margin-top: 4px;
+}
+
+/* État Étendu (Expanded) */
+.navbar.expanded {
+  width: 240px; /* Largeur normale */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.navbar.expanded .nav-item {
+  flex-direction: row; /* Icône à gauche du texte */
+  justify-content: flex-start;
+  padding: 12px 24px;
+  width: 100%;
+}
+
+.navbar.expanded .nav-text {
+  margin-left: 16px;
+  font-size: 14px;
+}
