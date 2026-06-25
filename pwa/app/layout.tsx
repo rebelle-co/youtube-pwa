@@ -1,10 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./styles/global.css";
-import { AppProvider } from './context/AppContext'
 import SuspenseWrapper from "./components/SuspenseWrapper";
-// Importez ici votre composant de Navbar si vous l'avez extrait, 
-// ou gardez-le ici si vous préférez.
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -15,16 +12,13 @@ export const metadata = {
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'YT Simulator' },
 }
 
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        <AppProvider>
-          <SuspenseWrapper>
-            {children}
-          </SuspenseWrapper>
-        </AppProvider>
+      <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <SuspenseWrapper>
+          {children}
+        </SuspenseWrapper>
       </body>
     </html>
   )
