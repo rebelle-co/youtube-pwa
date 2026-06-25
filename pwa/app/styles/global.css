@@ -34,4 +34,4 @@
 .app-container { display: flex; margin-top: 56px; }
 .nav-closed .navbar { display: none; }
 .nav-open .navbar { width: 240px; }
-.main-content { flex: 1; padding: 20px; }
+.main-content { flex: 1; padding: 20px; width: "auto"; }
