@@ -1,27 +1,50 @@
-'use client' // Important pour utiliser useState
+'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation' // <-- Import indispensable
+import { useAppContext } from '../context/AppContext'
+import { YouTubeSubscription } from '../types/youtube'
 
-export default function Navbar({ user, subscriptions }: { user: any, subscriptions: any[] }) {
+
+export default function Navbar() {
   const [isCascadeOpen, setIsCascadeOpen] = useState(false)
+  const router = useRouter()
+  const { subscriptions, fetchVideosForChannel, setSelectedChannel, setActiveSubTab } = useAppContext()
+
+  const handleChannelClick = (sub: YouTubeSubscription) => {
+    setSelectedChannel(sub)
+    fetchVideosForChannel(sub.id, sub.thumbnail)
+    setActiveSubTab('standard')
+    
+    router.push(`/channel/${sub.id}`)
+  }
 
   return (
     <nav className="navbar">
-      <Link href="/" className="nav-item">
-        <span>Accueil</span>
-      </Link>
+      <Link href="/" className="nav-item">Accueil</Link>
 
       <div className="nav-item-wrapper">
         <button onClick={() => setIsCascadeOpen(!isCascadeOpen)} className="nav-item">
-          <span>Abonnements {isCascadeOpen ? '▲' : '▼'}</span>
+          Abonnements {isCascadeOpen ? '▲' : '▼'}
         </button>
+        
         <div className={`navbar-cascade ${isCascadeOpen ? 'open' : ''}`}>
-           {/* Mapper vos abonnements ici avec <Link href={`/channel/${sub.id}`}> */}
+          {/* On définit le type de 'sub' ici même lors du mapping */}
+          {subscriptions.map((sub: YouTubeSubscription) => (
+            <div 
+              key={sub.id} 
+              className="nav-sub-item" 
+              onClick={() => handleChannelClick(sub)}
+            >
+              <img src={sub.thumbnail} alt={sub.title} className="nav-sub-avatar" />
+              <span>{sub.title}</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      <Link href="/downloads" className="nav-item"><span>Téléchargements</span></Link>
-      <Link href="/profile" className="nav-item"><span>Vous</span></Link>
+      <Link href="/downloads" className="nav-item">Téléchargements</Link>
+      <Link href="/profile" className="nav-item">Vous</Link>
     </nav>
   )
 }
