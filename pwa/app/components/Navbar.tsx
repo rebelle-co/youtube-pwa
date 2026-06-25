@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useAppContext } from '../context/AppContext'
 import { YouTubeSubscription } from '../types/youtube'
 import "./../styles/login.css"
@@ -13,6 +13,13 @@ export default function Navbar({ isOpen }: { isOpen: boolean }) {
   const [isCascadeOpen, setIsCascadeOpen] = useState(false)
   const router = useRouter()
   const { subscriptions, fetchVideosForChannel, setSelectedChannel, setActiveSubTab } = useAppContext()
+  const navItems = [
+    { name: 'Accueil', path: '/', icon: '/assets/home.svg', activeIcon: '/assets/is-home.svg' },
+    { name: 'Abonnements', path: '/subscriptions', icon: '/assets/subscribes.svg', activeIcon: '/assets/subscribes.svg' }, // Même icône si pas de version "is-sub"
+    { name: 'Téléchargements', path: '/downloads', icon: '/assets/home.svg', activeIcon: '/assets/is-home.svg' }, // Remplacez par vos fichiers
+    { name: 'Vous', path: '/profile', icon: '/assets/you.svg', activeIcon: '/assets/is-you.svg' },
+  ]
+  const pathname = usePathname() // <-- Déclaration ajoutée
 
   const handleChannelClick = (sub: YouTubeSubscription) => {
     setSelectedChannel(sub)
@@ -25,6 +32,24 @@ export default function Navbar({ isOpen }: { isOpen: boolean }) {
 
   return (
     <nav className={`navbar ${isOpen ? 'expanded' : 'mini'}`}>
+      {navItems.map((item) => {
+        const isActive = pathname === item.path
+        
+        return (
+          <button 
+            key={item.path}
+            onClick={() => router.push(item.path)} 
+            className={`nav-item ${isActive ? 'active' : ''}`}
+          >
+            <img 
+              src={isActive ? item.activeIcon : item.icon} 
+              alt={item.name} 
+              className="nav-icon"
+            />
+            {isOpen && <span>{item.name}</span>}
+          </button>
+        )
+      })}
       <button 
         onClick={() => {
           router.push('/');
