@@ -1,6 +1,7 @@
 import Navbar from "./components/Navbar";
 import SuspenseWrapper from "./components/SuspenseWrapper";
 import "./styles/global.css";
+import "./styles/login.css"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

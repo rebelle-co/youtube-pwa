@@ -1,5 +1,6 @@
 'use client'
 import { useAppContext } from "./context/AppContext"
+import "./styles/login.css"
 
 export default function HomePage() {
   const { user, loginWithGoogle } = useAppContext()
