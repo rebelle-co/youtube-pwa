@@ -38,39 +38,50 @@ export default function Home() {
   const [videos, setVideos] = useState<YouTubeVideo[]>([])
   const [loadingVideos, setLoadingVideos] = useState(false)
 
+  // Centralisation et nettoyage du cycle de vie de l'authentification
   useEffect(() => {
     console.log("[YT Simulator] 🚀 Initialisation du composant");
 
-    const checkUser = async () => {
+    const initializeAuth = async () => {
+      // 1. On récupère la session initiale de manière asynchrone et isolée
       const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      setLoading(false)
-
+      
       if (session?.provider_token) {
-        console.log("[YT Simulator] 📥 Token reçu de Supabase. Sauvegarde locale...");
+        console.log("[YT Simulator] 📥 Token frais reçu de Supabase. Sauvegarde locale...");
         localStorage.setItem('yt_oauth_token', session.provider_token)
+        setUser(session.user)
         fetchYouTubeSubscriptions(session.provider_token)
       } else if (session?.user) {
+        setUser(session.user)
         const savedToken = localStorage.getItem('yt_oauth_token')
         
         if (savedToken) {
           console.log("[YT Simulator] 💾 Récupération du token depuis le localStorage secondaire !");
           fetchYouTubeSubscriptions(savedToken)
         } else {
-          console.warn("[YT Simulator] ❌ Utilisateur connecté mais aucun token Google trouvé. Reconnexion requise.");
+          console.warn("[YT Simulator] ❌ Utilisateur connecté mais aucun token Google trouvé. Relance automatique du flux...");
+          // Si la session Supabase est active mais le token Google est mort, on réactualise le flux de manière transparente
+          loginWithGoogle()
+          return
         }
       }
+      setLoading(false)
     }
-    
-    checkUser()
 
+    initializeAuth()
+
+    // 2. On écoute uniquement les ÉVÉNEMENTS futurs (ex: clic sur login, déconnexion) pour éviter les doublons au montage
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setUser(session?.user ?? null)
+      console.log(`[YT Simulator] ⚡ Événement Auth détecté: ${event}`);
       
-      if (session?.provider_token) {
-        console.log(`[YT Simulator] ⚡ Événement Auth: ${event} -> Token détecté et sauvegardé.`);
+      if (event === 'SIGNED_IN' && session?.provider_token) {
         localStorage.setItem('yt_oauth_token', session.provider_token)
+        setUser(session.user)
         fetchYouTubeSubscriptions(session.provider_token)
+      }
+      
+      if (event === 'SIGNED_OUT') {
+        setUser(null)
       }
     })
 
@@ -93,8 +104,9 @@ export default function Home() {
         )
         
         if (res.status === 401) {
-          console.warn("[YT Simulator] ⏰ Le token Google a expiré.")
+          console.warn("[YT Simulator] ⏰ Le token Google a expiré. Nettoyage et demande de reconnexion.")
           localStorage.removeItem('yt_oauth_token')
+          loginWithGoogle() // Relance automatique en cas d'expiration soudaine en pleine session
           return
         }
 
@@ -128,7 +140,7 @@ export default function Home() {
 
   // Helper pour parser la durée ISO 8601 de YouTube (ex: PT1M15S) et vérifier si c'est un Short (<= 60s)
   const checkIfShort = (isoDuration: string): boolean => {
-    if (!isoDuration || isoDuration.includes('H')) return false // Plus d'une heure -> standard
+    if (!isoDuration || isoDuration.includes('H')) return false 
     const minutesMatch = isoDuration.match(/(\d+)M/)
     const secondsMatch = isoDuration.match(/(\d+)S/)
     
@@ -142,7 +154,10 @@ export default function Home() {
   // Récupération de TOUTES les vidéos d'une chaîne + triage Shorts vs Standard
   const fetchVideosForChannel = async (channelId: string) => {
     const token = localStorage.getItem('yt_oauth_token')
-    if (!token) return
+    if (!token) {
+      loginWithGoogle()
+      return
+    }
 
     setLoadingVideos(true)
     try {
@@ -150,15 +165,20 @@ export default function Home() {
       let rawItems: any[] = []
       let nextPageToken = ''
       let hasNextPage = true
-      let pageCount = 0 // Sécurité performance : on limite à 3 pages max (~150 vidéos récentes)
+      let pageCount = 0 
       
-      // 1. On boucle pour récupérer les vidéos brutes de la playlist d'uploads
       while (hasNextPage && pageCount < 3) {
         const pageParam = nextPageToken ? `&pageToken=${nextPageToken}` : ''
         const res = await fetch(
           `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50${pageParam}`,
           { headers: { Authorization: `Bearer ${token}` } }
         )
+
+        if (res.status === 401) {
+          localStorage.removeItem('yt_oauth_token')
+          loginWithGoogle()
+          return
+        }
 
         if (!res.ok) throw new Error('Erreur API YouTube Videos Playlist')
         const data = await res.json()
@@ -177,7 +197,6 @@ export default function Home() {
         return
       }
 
-      // 2. Hydratation : L'API playlistItems ne donne pas la durée. On regroupe les IDs par packs de 50 pour demander leurs détails.
       const videoIds = rawItems.map((item: any) => item.snippet.resourceId.videoId)
       let detailedVideos: YouTubeVideo[] = []
 
@@ -221,11 +240,11 @@ export default function Home() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: typeof window !== 'undefined' ? window.location.origin : '',
         scopes: 'https://www.googleapis.com/auth/youtube.readonly',
         queryParams: {
           access_type: 'offline',
-          prompt: 'consent'
+          prompt: 'select_account' // Permet une reconnexion quasi invisible (silencieuse) sans forcer l'écran de consentement à chaque fois
         }
       },
     })
@@ -269,7 +288,6 @@ export default function Home() {
     )
   }
 
-  // Filtrage des vidéos selon le sous-onglet sélectionné
   const filteredVideos = videos.filter(video => video.type === activeSubTab)
 
   return (
@@ -288,7 +306,6 @@ export default function Home() {
           <section>
             {selectedChannel ? (
               <>
-                {/* En-tête de la chaîne sélectionnée */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px', background: '#1a1a1a', padding: '15px', borderRadius: '12px', border: '1px solid #333' }}>
                   <img src={selectedChannel.thumbnail} alt={selectedChannel.title} style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover' }} />
                   <div>
@@ -297,7 +314,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* ─── SYSTÈME DE SOUS-ONGLETS (VIDEOS / SHORTS) ─── */}
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '25px', borderBottom: '1px solid #222' }}>
                   <button 
                     onClick={() => setActiveSubTab('standard')} 
@@ -338,7 +354,6 @@ export default function Home() {
                 ) : filteredVideos.length === 0 ? (
                   <div style={{ color: '#aaa', fontSize: '14px' }}>Aucun contenu disponible dans cette catégorie.</div>
                 ) : (
-                  /* Grille adaptative : layout horizontal classique pour vidéos, vertical fin pour les shorts */
                   <div style={{ 
                     display: 'grid', 
                     gridTemplateColumns: activeSubTab === 'shorts' 
@@ -482,7 +497,7 @@ export default function Home() {
                     setActiveTab('subscriptions');
                     setSelectedChannel(sub);       
                     fetchVideosForChannel(sub.id); 
-                    setActiveSubTab('standard'); // Reset par défaut sur vidéos classiques
+                    setActiveSubTab('standard'); 
                   }}
                 >
                   <img src={sub.thumbnail} alt={sub.title} className="nav-sub-avatar" />
