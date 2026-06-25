@@ -219,6 +219,7 @@
   width: 22px;
   height: 22px;
   fill: currentColor;
+  filter: invert(1);
 }
 
 /* Ajustements pour les écrans PC (Desktop) */
