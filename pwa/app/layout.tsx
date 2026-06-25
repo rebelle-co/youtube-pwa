@@ -1,19 +1,24 @@
 'use client'
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Navbar from "./components/Navbar";
 import Header from "./components/Header";
 import SuspenseWrapper from "./components/SuspenseWrapper";
 import "./styles/global.css";
 import "./styles/login.css";
 import { Providers } from './providers';
+import ParamsHandler from './context/ParamsHandler';
 
+// layout.tsx
 // layout.tsx
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
       <body style={{margin:0}}>
-        <Providers> 
-          {/* Maintenant, Header et Navbar peuvent lire le contexte sans erreur */}
+        <Providers>
+          {/* On ajoute le Suspense ici pour protéger l'utilisation de useSearchParams */}
+          <Suspense fallback={null}>
+            <ParamsHandler /> 
+          </Suspense>
           <LayoutContent>{children}</LayoutContent>
         </Providers>
       </body>
