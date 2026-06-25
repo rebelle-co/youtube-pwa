@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { User } from '@supabase/supabase-js'
 import { useRouter, useSearchParams } from 'next/navigation' // ◄ AJOUT : Imports Next.js Navigation
@@ -77,10 +77,14 @@ const formatViews = (views?: number): string => {
   return `${views} vue${views > 1 ? 's' : ''}`
 }
 
-export default function Home() {
-  const router = useRouter() // ◄ AJOUT : Initialisation du router
-  const searchParams = useSearchParams() // ◄ AJOUT : Lecture des paramètres d'URL
-  const channelParam = searchParams.get('channel') // ◄ AJOUT : Récupération du paramètre ?channel=...
+
+// ... (Gardez vos types, interfaces et fonctions utilitaires getRelativeTime, parseISODuration, etc. à l'identique ici)
+
+// 1. On renomme votre composant actuel en "SimulatorApp" (ou le nom de votre choix)
+function SimulatorApp() {
+  const router = useRouter()
+  const searchParams = useSearchParams() // ◄ Maintenant sécurisé car isolé sous un Suspense
+  const channelParam = searchParams.get('channel')
 
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -795,5 +799,18 @@ export default function Home() {
         </button>
       </nav>
     </div>
+  )
+}
+
+// 2. On crée le nouveau point d'entrée "Home" exporté par défaut qui englobe l'app avec Suspense
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="auth-wrapper">
+        <p className="loading-text">Chargement de l'environnement...</p>
+      </div>
+    }>
+      <SimulatorApp />
+    </Suspense>
   )
 }
