@@ -146,7 +146,7 @@ export default function Home() {
     return (minutes * 60) + seconds <= 60
   }
 
-  // Récupération des vidéos : Liste complète YouTube -> Affichage Cache DB -> Fetch des manquants seuls
+  // Récupération optimisée des vidéos : Comparaison de totaux -> Cache direct -> Fetch ciblé des X derniers
   const fetchVideosForChannel = async (channelId: string, channelThumbnail?: string) => {
     setLoadingVideos(true)
     try {
@@ -156,54 +156,13 @@ export default function Home() {
         return
       }
 
-      // 1. ÉTAPE SYNC : On récupère d'abord TOUS les IDs de vidéos depuis la playlist YouTube
-      const uploadsPlaylistId = 'UU' + channelId.substring(2)
-      let allVideoIds: string[] = []
-      let nextPageToken = ''
-      let hasNextPage = true
-
-      console.log(`[YT Simulator] 🔄 Récupération de la liste des vidéos YouTube pour la chaîne ${channelId}...`);
-
-      while (hasNextPage) {
-        const pageParam = nextPageToken ? `&pageToken=${nextPageToken}` : ''
-        const res = await fetch(
-          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50${pageParam}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
-
-        if (res.status === 401) {
-          localStorage.removeItem('yt_oauth_token')
-          loginWithGoogle()
-          return
-        }
-
-        if (!res.ok) throw new Error('Erreur API YouTube Videos Playlist')
-        const data = await res.json()
-        
-        const ids = data.items.map((item: any) => item.snippet.resourceId.videoId)
-        allVideoIds = [...allVideoIds, ...ids]
-
-        if (data.nextPageToken) {
-          nextPageToken = data.nextPageToken
-        } else {
-          hasNextPage = false
-        }
-      }
-
-      if (allVideoIds.length === 0) {
-        setVideos([])
-        setLoadingVideos(false)
-        return
-      }
-
-      // 2. VÉRIFICATION DB : On regarde quelles vidéos parmi cette liste sont DÉJÀ en base de données
-      console.log(`[YT Simulator] 🔍 Vérification des vidéos existantes en DB (${allVideoIds.length} IDs trouvés)...`);
+      // 1. CHARGEMENT IMMÉDIAT DE LA DB DU CANAL SÉLECTIONNÉ
+      console.log(`[YT Simulator] 🔍 Récupération des vidéos existantes en DB pour le canal ${channelId}...`);
       const { data: cachedVideos, error: dbError } = await supabase
         .from('videos')
         .select('*')
-        .in('id', allVideoIds)
+        .eq('channel_id', channelId)
 
-      // Règle 1 : On formate et on affiche DIRECTEMENT ce qui est déjà en DB
       const formattedCached: YouTubeVideo[] = cachedVideos ? cachedVideos.map((v: any) => ({
         id: v.id,
         title: v.title,
@@ -213,23 +172,68 @@ export default function Home() {
         type: (v.type || 'standard') as SubTabType
       })) : []
 
-      // Tri par date décroissante pour le premier affichage
+      // Tri chronologique décroissant immédiat pour l'expérience utilisateur
       formattedCached.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
-      
       setVideos(formattedCached)
-      setLoadingVideos(false) // On coupe le gros loader global car l'utilisateur voit déjà les vidéos en cache !
 
-      // 3. FILTRAGE DES MANQUANTS : On isole les IDs qui ne sont PAS en base de données
-      const cachedIdsSet = new Set(cachedVideos?.map(v => v.id) || [])
-      const missingVideoIds = allVideoIds.filter(id => !cachedIdsSet.has(id))
+      // 2. FETCH DU NOMBRE TOTAL DE VIDÉOS DEPUIS L'API YOUTUBE CHANNELS
+      console.log(`[YT Simulator] 🛰️ Vérification des compteurs de vidéos...`);
+      const channelStatsRes = await fetch(
+        `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
 
-      console.log(`[YT Simulator] 📊 Résultat : ${formattedCached.length} vidéos en cache, ${missingVideoIds.length} vidéos manquantes à fetch.`);
+      if (channelStatsRes.status === 401) {
+        localStorage.removeItem('yt_oauth_token')
+        loginWithGoogle()
+        return
+      }
 
-      // Règle 2 : S'il y a des vidéos manquantes, on fetch leurs détails et on les insère au compte-goutte
+      if (!channelStatsRes.ok) throw new Error('Erreur API YouTube Channel Stats')
+      const channelStatsData = await channelStatsRes.json()
+      
+      const ytVideoCount = parseInt(channelStatsData.items?.[0]?.statistics?.videoCount || '0', 10)
+      const dbVideoCount = formattedCached.length
+
+      console.log(`[YT Simulator] 📊 Comparatif Totaux -> YouTube: ${ytVideoCount} | Base de données: ${dbVideoCount}`);
+
+      // CONDITION DE SORTIE : Si les totaux concordent, on n'appelle pas l'API de Playlist !
+      if (ytVideoCount === dbVideoCount) {
+        console.log(`[YT Simulator] ✅ Synchro parfaite détectée (${ytVideoCount} vidéos). Rendu basé sur la DB locale.`);
+        setLoadingVideos(false)
+        return
+      }
+
+      // 3. FETCH UNIQUEMENT DES DERNIÈRES VIDÉOS POSTÉES (Les 50 dernières max pour vérifier les nouveautés)
+      console.log(`[YT Simulator] 🔄 Différence détectée. Analyse de la première page d'uploads...`);
+      const uploadsPlaylistId = 'UU' + channelId.substring(2)
+      
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+
+      if (!res.ok) throw new Error('Erreur API YouTube Videos Playlist')
+      const data = await res.json()
+      
+      const latestVideoIds: string[] = data.items.map((item: any) => item.snippet.resourceId.videoId)
+
+      if (latestVideoIds.length === 0) {
+        setLoadingVideos(false)
+        return
+      }
+
+      // 4. ISOLEMENT DES NOUVELLES VIDÉOS NON CACHÉES EN DB
+      const cachedIdsSet = new Set(formattedCached.map(v => v.id))
+      const missingVideoIds = latestVideoIds.filter(id => !cachedIdsSet.has(id))
+
+      console.log(`[YT Simulator] 📊 Résultat : ${missingVideoIds.length} nouvelles vidéos manquantes à intégrer.`);
+
+      // 5. TRAITEMENT ET INJECTION PROGRESSIVE DES VIDÉOS MANQUANTES
       if (missingVideoIds.length > 0) {
         for (let i = 0; i < missingVideoIds.length; i += 50) {
           const chunk = missingVideoIds.slice(i, i + 50)
-          console.log(`[YT Simulator] 📥 Fetching des détails pour un chunk de ${chunk.length} vidéos manquantes...`);
+          console.log(`[YT Simulator] 📥 Extraction des détails pour le lot de ${chunk.length} vidéos...`);
 
           const detailsRes = await fetch(
             `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet,statistics&id=${chunk.join(',')}`,
@@ -262,7 +266,7 @@ export default function Home() {
                 ? (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '')
                 : (item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '')
 
-              // Préparation pour l'écriture Supabase
+              // Structure d'écriture Supabase
               dbInserts.push({
                 id: item.id,
                 title: item.snippet.title,
@@ -276,7 +280,7 @@ export default function Home() {
                 type: finalType
               })
 
-              // Préparation pour l'affichage immédiat
+              // Structure pour l'affichage réactif immédiat
               formattedChunk.push({
                 id: item.id,
                 title: item.snippet.title,
@@ -287,21 +291,20 @@ export default function Home() {
               })
             })
 
-            // Écriture en arrière-plan dans Supabase
+            // Sauvegarde sécurisée en tâche de fond dans Supabase
             if (dbInserts.length > 0) {
               const { error: upsertError } = await supabase.from('videos').upsert(dbInserts)
               if (upsertError) console.error("[YT Simulator] Erreur insertion Supabase :", upsertError)
             }
 
-            // Injection progressive des nouvelles vidéos dans l'UI avec maintien du tri chronologique
+            // Injection et ré-ordonnancement fluide à la volée dans la grille UI
             setVideos((prevVideos) => {
               const newCombined = [...prevVideos, ...formattedChunk]
-              // Tri dynamique pour que les nouvelles vidéos s'intègrent à la bonne place
               return newCombined.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
             })
           }
         }
-        console.log(`[YT Simulator] 🎉 Synchronisation complète terminée !`);
+        console.log(`[YT Simulator] 🎉 Synchronisation et injection terminées !`);
       }
 
     } catch (err) {
@@ -424,7 +427,7 @@ export default function Home() {
                   </button>
                 </div>
 
-                {loadingVideos ? (
+                {loadingVideos && filteredVideos.length === 0 ? (
                   <div style={{ color: '#aaa', fontSize: '14px' }}>Extraction et classification des flux médias bruts...</div>
                 ) : filteredVideos.length === 0 ? (
                   <div style={{ color: '#aaa', fontSize: '14px' }}>Aucun contenu disponible dans cette catégorie.</div>
@@ -571,7 +574,7 @@ export default function Home() {
                   onClick={() => {
                     setActiveTab('subscriptions');
                     setSelectedChannel(sub);       
-                    fetchVideosForChannel(sub.id, sub.thumbnail); // Modifié ici pour passer l'avatar de la chaîne
+                    fetchVideosForChannel(sub.id, sub.thumbnail);
                     setActiveSubTab('standard'); 
                   }}
                 >
