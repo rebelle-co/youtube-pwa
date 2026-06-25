@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { User } from '@supabase/supabase-js'
-import { useRouter, useSearchParams } from 'next/navigation' // ◄ AJOUT : Imports Next.js Navigation
+import { useRouter, useSearchParams } from 'next/navigation'
 import './styles/login.css'
 
 type TabType = 'accueil' | 'downloads' | 'subscriptions' | 'profile'
@@ -27,6 +27,7 @@ interface YouTubeVideo {
   viewCount?: number      
 }
 
+// Outils de formatage
 const getRelativeTime = (isoString: string): string => {
   if (!isoString) return "à l'instant"
   const now = new Date()
@@ -77,13 +78,9 @@ const formatViews = (views?: number): string => {
   return `${views} vue${views > 1 ? 's' : ''}`
 }
 
-
-// ... (Gardez vos types, interfaces et fonctions utilitaires getRelativeTime, parseISODuration, etc. à l'identique ici)
-
-// 1. On renomme votre composant actuel en "SimulatorApp" (ou le nom de votre choix)
 function SimulatorApp() {
   const router = useRouter()
-  const searchParams = useSearchParams() // ◄ Maintenant sécurisé car isolé sous un Suspense
+  const searchParams = useSearchParams() 
   const channelParam = searchParams.get('channel')
 
   const [user, setUser] = useState<User | null>(null)
@@ -104,27 +101,27 @@ function SimulatorApp() {
   const [videos, setVideos] = useState<YouTubeVideo[]>([])
   const [loadingVideos, setLoadingVideos] = useState(false)
 
-  // ÉFFET 1 : Initialisation de l'authentification
-  useEffect(() => {
-    console.log("[YT Simulator] 🚀 Initialisation du composant");
+  // NOUVEAUX ÉTATS : Lecteur vidéo et fonctionnalités YouTube interactives
+  const [currentVideo, setCurrentVideo] = useState<YouTubeVideo | null>(null)
+  const [isLiked, setIsLiked] = useState(false)
+  const [isSubscribed, setIsSubscribed] = useState(true) // Vrai par défaut puisqu'il s'agit de la liste d'abonnements
+  const [downloadedVideos, setDownloadedVideos] = useState<any[]>([])
 
+  // Initialisation de l'authentification et récupération du stockage local au démarrage
+  useEffect(() => {
     const initializeAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       
       if (session?.provider_token) {
-        console.log("[YT Simulator] 📥 Token frais reçu de Supabase. Sauvegarde locale...");
         localStorage.setItem('yt_oauth_token', session.provider_token)
         setUser(session.user)
         fetchYouTubeSubscriptions(session.provider_token)
       } else if (session?.user) {
         setUser(session.user)
         const savedToken = localStorage.getItem('yt_oauth_token')
-        
         if (savedToken) {
-          console.log("[YT Simulator] 💾 Récupération du token depuis le localStorage secondaire !");
           fetchYouTubeSubscriptions(savedToken)
         } else {
-          console.warn("[YT Simulator] ❌ Utilisateur connecté mais aucun token Google trouvé. Relance automatique du flux...");
           loginWithGoogle()
           return
         }
@@ -133,16 +130,14 @@ function SimulatorApp() {
     }
 
     initializeAuth()
+    loadDownloadedVideos()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log(`[YT Simulator] ⚡ Événement Auth détecté: ${event}`);
-      
       if (event === 'SIGNED_IN' && session?.provider_token) {
         localStorage.setItem('yt_oauth_token', session.provider_token)
         setUser(session.user)
         fetchYouTubeSubscriptions(session.provider_token)
       }
-      
       if (event === 'SIGNED_OUT') {
         setUser(null)
       }
@@ -151,15 +146,14 @@ function SimulatorApp() {
     return () => subscription.unsubscribe()
   }, [])
 
-  // ◄ AJOUT : ÉFFET 2 : Restauration de la chaîne active depuis l'URL après un reload
+  // Restauration de la chaîne active depuis l'URL
   useEffect(() => {
     if (subscriptions.length > 0 && channelParam && !selectedChannel) {
       const savedChannel = subscriptions.find(sub => sub.id === channelParam)
       if (savedChannel) {
-        console.log(`[YT Simulator] 🔄 Restauration de la chaîne active depuis l'URL : ${savedChannel.title}`);
         setSelectedChannel(savedChannel)
         setActiveTab('subscriptions')
-        setIsCascadeOpen(true) // Optionnel : ouvre l'accordéon pour montrer la sélection
+        setIsCascadeOpen(true) 
         fetchVideosForChannel(savedChannel.id, savedChannel.thumbnail)
       }
     }
@@ -180,14 +174,12 @@ function SimulatorApp() {
         )
         
         if (res.status === 401) {
-          console.warn("[YT Simulator] ⏰ Le token Google a expiré. Nettoyage et demande de reconnexion.")
           localStorage.removeItem('yt_oauth_token')
           loginWithGoogle()
           return
         }
 
         if (!res.ok) throw new Error('Erreur API YouTube')
-        
         const data = await res.json()
         
         const formattedSubs = data.items.map((item: any) => ({
@@ -197,43 +189,24 @@ function SimulatorApp() {
         }))
         
         allSubs = [...allSubs, ...formattedSubs]
-
-        if (data.nextPageToken) {
-          nextPageToken = data.nextPageToken
-        } else {
-          hasNextPage = false
-        }
+        if (data.nextPageToken) nextPageToken = data.nextPageToken
+        else hasNextPage = false
       }
-      
       setSubscriptions(allSubs)
-      console.log(`[YT Simulator] 🎉 ${allSubs.length} abonnements chargés avec succès !`);
     } catch (err) {
-      console.error("[YT Simulator] Erreur lors du fetch YouTube :", err)
+      console.error("Erreur lors du fetch YouTube :", err)
     } finally {
       setLoadingSubs(false)
     }
-  }
-
-  const checkIfShort = (isoDuration: string): boolean => {
-    if (!isoDuration || isoDuration.includes('H')) return false 
-    const minutesMatch = isoDuration.match(/(\d+)M/)
-    const secondsMatch = isoDuration.match(/(\d+)S/)
-    const minutes = minutesMatch ? parseInt(minutesMatch[1], 10) : 0
-    const seconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 0
-    return (minutes * 60) + seconds <= 60
   }
 
   const fetchVideosForChannel = async (channelId: string, channelThumbnail?: string) => {
     setLoadingVideos(true)
     try {
       const token = localStorage.getItem('yt_oauth_token')
-      if (!token) {
-        loginWithGoogle()
-        return
-      }
+      if (!token) { loginWithGoogle(); return; }
 
-      console.log(`[YT Simulator] 🔍 Récupération des vidéos existantes en DB pour le canal ${channelId}...`);
-      const { data: cachedVideos, error: dbError } = await supabase
+      const { data: cachedVideos } = await supabase
         .from('videos')
         .select('*')
         .eq('channel_id', channelId)
@@ -252,7 +225,6 @@ function SimulatorApp() {
       formattedCached.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
       setVideos(formattedCached)
 
-      console.log(`[YT Simulator] 🛰️ Vérification des compteurs de vidéos...`);
       const channelStatsRes = await fetch(
         `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}`,
         { headers: { Authorization: `Bearer ${token}` } }
@@ -266,19 +238,13 @@ function SimulatorApp() {
 
       if (!channelStatsRes.ok) throw new Error('Erreur API YouTube Channel Stats')
       const channelStatsData = await channelStatsRes.json()
-      
       const ytVideoCount = parseInt(channelStatsData.items?.[0]?.statistics?.videoCount || '0', 10)
-      const dbVideoCount = formattedCached.length
 
-      console.log(`[YT Simulator] 📊 Comparatif Totaux -> YouTube: ${ytVideoCount} | Base de données: ${dbVideoCount}`);
-
-      if (ytVideoCount === dbVideoCount) {
-        console.log(`[YT Simulator] ✅ Synchro parfaite détectée (${ytVideoCount} vidéos). Rendu basé sur la DB locale.`);
+      if (ytVideoCount === formattedCached.length) {
         setLoadingVideos(false)
         return
       }
 
-      console.log(`[YT Simulator] 🔄 Différence détectée. Récupération de la liste complète pour synchronisation...`);
       const uploadsPlaylistId = 'UU' + channelId.substring(2)
       let allPlaylistVideoIds: string[] = []
       let nextPageToken = ''
@@ -293,15 +259,11 @@ function SimulatorApp() {
 
         if (!res.ok) throw new Error('Erreur API YouTube Videos Playlist')
         const data = await res.json()
-        
         const ids = data.items.map((item: any) => item.snippet.resourceId.videoId)
         allPlaylistVideoIds = [...allPlaylistVideoIds, ...ids]
 
-        if (data.nextPageToken) {
-          nextPageToken = data.nextPageToken
-        } else {
-          hasNextPage = false
-        }
+        if (data.nextPageToken) nextPageToken = data.nextPageToken
+        else hasNextPage = false
       }
 
       if (allPlaylistVideoIds.length === 0) {
@@ -312,13 +274,9 @@ function SimulatorApp() {
       const cachedIdsSet = new Set(formattedCached.map(v => v.id))
       const missingVideoIds = allPlaylistVideoIds.filter(id => !cachedIdsSet.has(id))
 
-      console.log(`[YT Simulator] 📊 Résultat : ${missingVideoIds.length} vidéos manquantes à intégrer.`);
-
       if (missingVideoIds.length > 0) {
         for (let i = 0; i < missingVideoIds.length; i += 50) {
           const chunk = missingVideoIds.slice(i, i + 50)
-          console.log(`[YT Simulator] 📥 Fetching des détails pour un chunk de ${chunk.length} vidéos manquantes...`);
-
           const detailsRes = await fetch(
             `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet,statistics&id=${chunk.join(',')}`,
             { headers: { Authorization: `Bearer ${token}` } }
@@ -326,7 +284,6 @@ function SimulatorApp() {
 
           if (detailsRes.ok) {
             const detailsData = await detailsRes.json()
-
             const classificationRes = await fetch('/api/classify-videos', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -334,20 +291,16 @@ function SimulatorApp() {
             })
 
             let realTypes: Record<string, 'standard' | 'shorts'> = {}
-            if (classificationRes.ok) {
-              realTypes = await classificationRes.json()
-            }
+            if (classificationRes.ok) realTypes = await classificationRes.json()
 
             const dbInserts: any[] = []
             const formattedChunk: YouTubeVideo[] = []
 
             detailsData.items.forEach((item: any) => {
               const finalType = realTypes[item.id] || 'standard'
-              const isShort = finalType === 'shorts'
-
-              const thumbnail = isShort 
-                ? (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '')
-                : (item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '')
+              const thumbnail = finalType === 'shorts' 
+                ? (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || '')
+                : (item.snippet.thumbnails?.medium?.url || '')
 
               dbInserts.push({
                 id: item.id,
@@ -375,24 +328,77 @@ function SimulatorApp() {
             })
 
             if (dbInserts.length > 0) {
-              const { error: upsertError } = await supabase.from('videos').upsert(dbInserts)
-              if (upsertError) console.error("[YT Simulator] Erreur insertion Supabase :", upsertError)
+              await supabase.from('videos').upsert(dbInserts)
             }
 
-            setVideos((prevVideos) => {
-              const newCombined = [...prevVideos, ...formattedChunk]
-              return newCombined.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
-            })
+            setVideos((prev) => [...prev, ...formattedChunk].sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime()))
           }
         }
-        console.log(`[YT Simulator] 🎉 Synchronisation complète terminée !`);
       }
-
     } catch (err) {
-      console.error("[YT Simulator] Erreur lors du traitement des vidéos :", err)
+      console.error("Erreur traitement vidéos :", err)
     } finally {
       setLoadingVideos(false)
     }
+  }
+
+  // INTERACTION DIRECTE AVEC L'API YOUTUBE (Écriture réelle)
+  const handleLikeVideo = async (videoId: string) => {
+    const token = localStorage.getItem('yt_oauth_token')
+    if (!token) return
+    try {
+      const rating = isLiked ? 'none' : 'like'
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/videos/rate?id=${videoId}&rating=${rating}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.ok) setIsLiked(!isLiked)
+    } catch (err) {
+      console.error("Erreur lors du Like:", err)
+    }
+  }
+
+  const handleToggleSubscribe = async (channelId: string) => {
+    const token = localStorage.getItem('yt_oauth_token')
+    if (!token) return
+    try {
+      if (isSubscribed) {
+        // Pour se désabonner, l'API demande l'ID d'abonnement (subscriptionId), simplifié ici pour l'exemple
+        setIsSubscribed(false)
+      } else {
+        const res = await fetch(`https://www.googleapis.com/youtube/v3/subscriptions?part=snippet`, {
+          method: 'POST',
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            snippet: { resourceId: { kind: 'youtube#channel', channelId: channelId } }
+          })
+        })
+        if (res.ok) setIsSubscribed(true)
+      }
+    } catch (err) {
+      console.error("Erreur d'abonnement:", err)
+    }
+  }
+
+  // SIMULATION TÉLÉCHARGEMENT COMPATIBLE CLIENT (Mock Blobs / LocalStorage)
+  const handleDownloadVideo = (video: YouTubeVideo) => {
+    const localDownloads = JSON.parse(localStorage.getItem('yt_sim_downloads') || '[]')
+    if (localDownloads.some((v: any) => v.id === video.id)) {
+      alert("Vidéo déjà téléchargée !")
+      return
+    }
+    const updated = [...localDownloads, { ...video, localUrl: 'offline_active' }]
+    localStorage.setItem('yt_sim_downloads', JSON.stringify(updated))
+    setDownloadedVideos(updated)
+    alert("Vidéo enregistrée pour le mode hors-ligne !")
+  }
+
+  const loadDownloadedVideos = () => {
+    const localDownloads = JSON.parse(localStorage.getItem('yt_sim_downloads') || '[]')
+    setDownloadedVideos(localDownloads)
   }
 
   const loginWithGoogle = async () => {
@@ -400,17 +406,14 @@ function SimulatorApp() {
       provider: 'google',
       options: {
         redirectTo: typeof window !== 'undefined' ? window.location.origin : '',
-        scopes: 'https://www.googleapis.com/auth/youtube.readonly',
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'select_account' 
-        }
+        // AJOUT IMPÉRATIF DU SCOPE D'ÉCRITURE FORCE-SSL
+        scopes: 'https://www.googleapis.com/auth/youtube.readonly https://www.googleapis.com/auth/youtube.force-ssl',
+        queryParams: { access_type: 'offline', prompt: 'select_account' }
       },
     })
   }
 
   const handleLogout = async () => {
-    console.log("[YT Simulator] 🚪 Déconnexion complète.");
     localStorage.removeItem('yt_oauth_token')
     await supabase.auth.signOut()
     setSubscriptions([])
@@ -419,7 +422,8 @@ function SimulatorApp() {
     setIsCascadeOpen(false)
     setActiveTab('accueil')
     setActiveSubTab('standard')
-    router.push('/') // ◄ AJOUT : Nettoie les query params de l'URL à la déconnexion
+    setCurrentVideo(null)
+    router.push('/')
   }
 
   if (loading) {
@@ -452,15 +456,9 @@ function SimulatorApp() {
   const processedVideos = videos
     .filter(video => video.type === activeSubTab)
     .sort((a, b) => {
-      if (currentFilter === 'recent') {
-        return new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime()
-      }
-      if (currentFilter === 'old') {
-        return new Date(a.rawPublishedAt).getTime() - new Date(b.rawPublishedAt).getTime()
-      }
-      if (currentFilter === 'popular') {
-        return (b.viewCount || 0) - (a.viewCount || 0)
-      }
+      if (currentFilter === 'recent') return new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime()
+      if (currentFilter === 'old') return new Date(a.rawPublishedAt).getTime() - new Date(b.rawPublishedAt).getTime()
+      if (currentFilter === 'popular') return (b.viewCount || 0) - (a.viewCount || 0)
       return 0
     })
 
@@ -468,11 +466,77 @@ function SimulatorApp() {
     <div className="app-container">
       
       {/* ─── CONTENU DYNAMIQUE DES ONGLETS ─── */}
-      <main className="tab-content">
+      <main className="tab-content" style={{ paddingBottom: '100px' }}>
+        
+        {/* LECTEUR STYLE YOUTUBE (S'affiche en haut de l'onglet actif si une vidéo est sélectionnée) */}
+        {currentVideo && (
+          <div className="youtube-player-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '24px', marginBottom: '30px', background: '#0f0f0f', padding: '20px', borderRadius: '16px' }}>
+            {/* Colonne Principale de Gauche */}
+            <div className="player-main-col">
+              <div className="video-wrapper" style={{ width: '100%', aspectRatio: '16/9', background: '#000', borderRadius: '12px', overflow: 'hidden' }}>
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={`https://www.youtube.com/embed/${currentVideo.id}?autoplay=1`}
+                  title={currentVideo.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  allowFullScreen
+                ></iframe>
+              </div>
+              <h1 style={{ fontSize: '18px', margin: '14px 0 10px 0', color: '#fff', fontWeight: 'bold' }}>{currentVideo.title}</h1>
+              
+              {/* Informations Créateur & Boutons d'interactions */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <img src={selectedChannel?.thumbnail || user.user_metadata?.avatar_url} alt="Avatar" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+                  <div>
+                    <h3 style={{ fontSize: '15px', margin: 0, color: '#fff' }}>{selectedChannel?.title || "Chaîne YouTube"}</h3>
+                    <span style={{ fontSize: '12px', color: '#aaa' }}>{formatViews(currentVideo.viewCount)}</span>
+                  </div>
+                  <button 
+                    onClick={() => handleToggleSubscribe(selectedChannel?.id || '')}
+                    style={{ background: isSubscribed ? '#272727' : '#fff', color: isSubscribed ? '#fff' : '#000', padding: '8px 16px', borderRadius: '18px', border: 'none', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer', marginLeft: '12px' }}
+                  >
+                    {isSubscribed ? 'Abonné' : "S'abonner"}
+                  </button>
+                </div>
+
+                {/* Barre d'outils d'interactions */}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => handleLikeVideo(currentVideo.id)} style={{ background: '#272727', color: '#fff', padding: '8px 16px', borderRadius: '18px 0 0 18px', border: 'none', borderRight: '1px solid #444', fontWeight: '500', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    {isLiked ? '❤️' : '👍'} Like
+                  </button>
+                  <button style={{ background: '#272727', color: '#fff', padding: '8px 12px', borderRadius: '0 18px 18px 0', border: 'none', fontWeight: '500', fontSize: '13px', cursor: 'pointer' }}>👎</button>
+                  <button onClick={() => navigator.clipboard.writeText(`https://youtu.be/${currentVideo.id}`)} style={{ background: '#272727', color: '#fff', padding: '8px 16px', borderRadius: '18px', border: 'none', fontWeight: '500', fontSize: '13px', cursor: 'pointer' }}>↪️ Partager</button>
+                  <button style={{ background: '#272727', color: '#fff', padding: '8px 16px', borderRadius: '18px', border: 'none', fontWeight: '500', fontSize: '13px', cursor: 'pointer' }}>📁 Enregistrer</button>
+                  <button onClick={() => handleDownloadVideo(currentVideo)} style={{ background: '#272727', color: '#4af', padding: '8px 16px', borderRadius: '18px', border: 'none', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer' }}>📥 Télécharger</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Colonne de Droite (Vidéos suggérées) */}
+            <div className="player-sidebar-col" style={{ overflowY: 'auto', maxHeight: '500px' }}>
+              <h3 style={{ fontSize: '14px', margin: '0 0 12px 0', color: '#fff' }}>Prochaines vidéos</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {processedVideos.filter(v => v.id !== currentVideo.id).slice(0, 8).map(video => (
+                  <div key={video.id} onClick={() => setCurrentVideo(video)} style={{ display: 'flex', gap: '8px', cursor: 'pointer' }}>
+                    <img src={video.thumbnail} alt={video.title} style={{ width: '120px', aspectRatio: '16/9', borderRadius: '8px', objectFit: 'cover' }} />
+                    <div>
+                      <h4 style={{ fontSize: '12px', margin: 0, color: '#fff', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{video.title}</h4>
+                      <span style={{ fontSize: '10px', color: '#aaa', display: 'block', marginTop: '4px' }}>{getRelativeTime(video.rawPublishedAt)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'accueil' && (
           <section>
             <h2 className="tab-title">Accueil</h2>
-            <p style={{ color: '#aaa', fontSize: '14px' }}>Ici s'affichera la grille principale des vidéos.</p>
+            <p style={{ color: '#aaa', fontSize: '14px' }}>Sélectionnez un créateur dans l'onglet abonnements ci-dessous.</p>
           </section>
         )}
 
@@ -489,89 +553,22 @@ function SimulatorApp() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '15px', borderBottom: '1px solid #222' }}>
-                  <button 
-                    onClick={() => setActiveSubTab('standard')} 
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: activeSubTab === 'standard' ? '#fff' : '#666',
-                      borderBottom: activeSubTab === 'standard' ? '2px solid #e50914' : '2px solid transparent',
-                      paddingBottom: '10px',
-                      fontSize: '15px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                  >
+                  <button onClick={() => setActiveSubTab('standard')} style={{ background: 'none', border: 'none', color: activeSubTab === 'standard' ? '#fff' : '#666', borderBottom: activeSubTab === 'standard' ? '2px solid #e50914' : '2px solid transparent', paddingBottom: '10px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
                     Vidéos
                   </button>
-                  <button 
-                    onClick={() => setActiveSubTab('shorts')} 
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: activeSubTab === 'shorts' ? '#fff' : '#666',
-                      borderBottom: activeSubTab === 'shorts' ? '2px solid #e50914' : '2px solid transparent',
-                      paddingBottom: '10px',
-                      fontSize: '15px',
-                      fontWeight: 'bold',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s'
-                    }}
-                  >
+                  <button onClick={() => setActiveSubTab('shorts')} style={{ background: 'none', border: 'none', color: activeSubTab === 'shorts' ? '#fff' : '#666', borderBottom: activeSubTab === 'shorts' ? '2px solid #e50914' : '2px solid transparent', paddingBottom: '10px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer', transition: 'all 0.2s' }}>
                     Shorts ⚡
                   </button>
                 </div>
 
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '20px',
-                  padding: '0 4px',
-                  fontFamily: 'Roboto, "Arial", sans-serif',
-                  fontSize: '13px'
-                }}>
-                  <button 
-                    onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'recent' }))}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: currentFilter === 'recent' ? '#fff' : '#666',
-                      fontWeight: currentFilter === 'recent' ? 'bold' : 'normal',
-                      cursor: 'pointer',
-                      padding: '5px 0',
-                      fontFamily: 'inherit'
-                    }}
-                  >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '0 4px', fontFamily: 'Roboto, "Arial", sans-serif', fontSize: '13px' }}>
+                  <button onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'recent' }))} style={{ background: 'none', border: 'none', color: currentFilter === 'recent' ? '#fff' : '#666', fontWeight: currentFilter === 'recent' ? 'bold' : 'normal', cursor: 'pointer', padding: '5px 0', fontFamily: 'inherit' }}>
                     Les plus récentes
                   </button>
-                  <button 
-                    onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'popular' }))}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: currentFilter === 'popular' ? '#fff' : '#666',
-                      fontWeight: currentFilter === 'popular' ? 'bold' : 'normal',
-                      cursor: 'pointer',
-                      padding: '5px 0',
-                      fontFamily: 'inherit'
-                    }}
-                  >
+                  <button onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'popular' }))} style={{ background: 'none', border: 'none', color: currentFilter === 'popular' ? '#fff' : '#666', fontWeight: currentFilter === 'popular' ? 'bold' : 'normal', cursor: 'pointer', padding: '5px 0', fontFamily: 'inherit' }}>
                     Populaires
                   </button>
-                  <button 
-                    onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'old' }))}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: currentFilter === 'old' ? '#fff' : '#666',
-                      fontWeight: currentFilter === 'old' ? 'bold' : 'normal',
-                      cursor: 'pointer',
-                      padding: '5px 0',
-                      fontFamily: 'inherit'
-                    }}
-                  >
+                  <button onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'old' }))} style={{ background: 'none', border: 'none', color: currentFilter === 'old' ? '#fff' : '#666', fontWeight: currentFilter === 'old' ? 'bold' : 'normal', cursor: 'pointer', padding: '5px 0', fontFamily: 'inherit' }}>
                     Les plus anciennes
                   </button>
                 </div>
@@ -581,72 +578,18 @@ function SimulatorApp() {
                 ) : processedVideos.length === 0 ? (
                   <div style={{ color: '#aaa', fontSize: '14px' }}>Aucun contenu disponible dans cette catégorie.</div>
                 ) : (
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: activeSubTab === 'shorts' 
-                      ? 'repeat(auto-fill, minmax(160px, 1fr))' 
-                      : 'repeat(auto-fill, minmax(260px, 1fr))', 
-                    gap: '20px' 
-                  }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: activeSubTab === 'shorts' ? 'repeat(auto-fill, minmax(160px, 1fr))' : 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
                     {processedVideos.map((video) => (
-                      <div 
-                        key={video.id} 
-                        className="video-card" 
-                        style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', border: '1px solid #333', cursor: 'pointer' }} 
-                        onClick={() => console.log("Lecture de la vidéo :", video.id)}
-                      >
+                      <div key={video.id} className="video-card" style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', border: '1px solid #333', cursor: 'pointer' }} onClick={() => setCurrentVideo(video)}>
                         <div style={{ position: 'relative', width: '100%', aspectRatio: activeSubTab === 'shorts' ? '9/16' : '16/9' }}>
-                          <img 
-                            src={video.thumbnail} 
-                            alt={video.title} 
-                            style={{ 
-                              width: '100%', 
-                              height: '100%',
-                              objectFit: 'cover' 
-                            }} 
-                          />
+                          <img src={video.thumbnail} alt={video.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           {video.duration && (
-                            <span style={{
-                              position: 'absolute',
-                              bottom: '6px',
-                              right: '6px',
-                              backgroundColor: 'rgba(0, 0, 0, 0.75)',
-                              color: '#fff',
-                              padding: '3px 6px',
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              fontWeight: '500',
-                              fontFamily: 'Roboto, "Arial", sans-serif'
-                            }}>
-                              {video.duration}
-                            </span>
+                            <span style={{ position: 'absolute', bottom: '6px', right: '6px', backgroundColor: 'rgba(0, 0, 0, 0.75)', color: '#fff', padding: '3px 6px', borderRadius: '4px', fontSize: '11px', fontWeight: '500', fontFamily: 'Roboto, "Arial", sans-serif' }}>{video.duration}</span>
                           )}
                         </div>
-
                         <div style={{ padding: '12px' }}>
-                          <h4 style={{ 
-                            margin: '0 0 6px 0', 
-                            fontSize: '13px', 
-                            color: '#fff', 
-                            fontFamily: 'Roboto, "Arial", sans-serif',
-                            display: '-webkit-box', 
-                            WebkitLineClamp: 2, 
-                            WebkitBoxOrient: 'vertical', 
-                            overflow: 'hidden', 
-                            textOverflow: 'ellipsis',
-                            lineHeight: '1.4' 
-                          }}>
-                            {video.title}
-                          </h4>
-                          
-                          <div style={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: '6px', 
-                            color: '#777', 
-                            fontSize: '11px',
-                            fontFamily: 'Roboto, "Arial", sans-serif' 
-                          }}>
+                          <h4 style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#fff', fontFamily: 'Roboto, "Arial", sans-serif', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: '1.4' }}>{video.title}</h4>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#777', fontSize: '11px', fontFamily: 'Roboto, "Arial", sans-serif' }}>
                             <span>{formatViews(video.viewCount)}</span>
                             <span style={{ fontSize: '8px', color: '#444' }}>●</span>
                             <span>{getRelativeTime(video.rawPublishedAt)}</span>
@@ -668,48 +611,42 @@ function SimulatorApp() {
 
         {activeTab === 'downloads' && (
           <section>
-            <h2 className="tab-title">Téléchargements</h2>
-            <p style={{ color: '#aaa', fontSize: '14px' }}>Aucun contenu téléchargé pour le moment.</p>
+            <h2 className="tab-title">Téléchargements (Hors-ligne)</h2>
+            {downloadedVideos.length === 0 ? (
+              <p style={{ color: '#aaa', fontSize: '14px' }}>Aucun contenu téléchargé localement.</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
+                {downloadedVideos.map((video) => (
+                  <div key={video.id} className="video-card" style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', border: '1px solid #333', cursor: 'pointer' }} onClick={() => setCurrentVideo(video)}>
+                    <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9' }}>
+                      <img src={video.thumbnail} alt={video.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    </div>
+                    <div style={{ padding: '12px' }}>
+                      <h4 style={{ margin: '0 0 6px 0', fontSize: '13px', color: '#fff' }}>{video.title}</h4>
+                      <span style={{ fontSize: '11px', color: '#4af', fontWeight: 'bold' }}>Disponible Hors-ligne (Simulé)</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
         {activeTab === 'profile' && (
           <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <h2 className="tab-title">Mon Profil</h2>
-            
             <div style={{ background: '#1a1a1a', padding: '20px', borderRadius: '12px', border: '1px solid #333' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '20px' }}>
                 {user.user_metadata?.avatar_url && (
-                  <img 
-                    src={user.user_metadata.avatar_url} 
-                    alt="Avatar" 
-                    style={{ width: '60px', height: '60px', borderRadius: '50%', border: '2px solid red' }}
-                  />
+                  <img src={user.user_metadata.avatar_url} alt="Avatar" style={{ width: '60px', height: '60px', borderRadius: '50%', border: '2px solid red' }} />
                 )}
                 <div>
                   <h3 style={{ margin: 0, fontSize: '18px' }}>{user.user_metadata?.full_name || 'Utilisateur'}</h3>
                   <p style={{ margin: '4px 0 0 0', color: '#888', fontSize: '14px' }}>{user.email}</p>
                 </div>
               </div>
-
               <hr style={{ border: 'none', borderTop: '1px solid #333', margin: '20px 0' }} />
-
-              <button 
-                onClick={handleLogout} 
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  background: '#e50914',
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s'
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.background = '#b81d24')}
-                onMouseOut={(e) => (e.currentTarget.style.background = '#e50914')}
-              >
+              <button onClick={handleLogout} style={{ width: '100%', padding: '12px', background: '#e50914', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
                 Se déconnecter de l'application
               </button>
             </div>
@@ -717,7 +654,7 @@ function SimulatorApp() {
         )}
       </main>
 
-      {/* ─── NAVBAR AVEC ACCORDÉON INTÉGRÉ ─── */}
+      {/* ─── NAVBAR AVEC ACCORDÉON (PARTIE 1 + PARTIE 2 COMPLET) ─── */}
       <nav className="navbar">
         <button onClick={() => { setActiveTab('accueil'); setIsCascadeOpen(false); }} className={`nav-item ${activeTab === 'accueil' ? 'active' : ''}`}>
           <svg className="nav-icon" viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
@@ -725,17 +662,8 @@ function SimulatorApp() {
         </button>
 
         <div className="nav-item-wrapper">
-          <button 
-            onClick={() => {
-              setActiveTab('subscriptions');
-              setIsCascadeOpen(!isCascadeOpen);
-            }} 
-            className={`nav-item ${activeTab === 'subscriptions' ? 'active' : ''}`}
-            style={{ width: '100%' }}
-          >
-            <svg className="nav-icon" viewBox="0 0 24 24">
-              <path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V4c0-1.1-.9-2-2-2zm-1 7h-2v2h-2V9h-2V7h2V5h2v2h2v2z"/>
-            </svg>
+          <button onClick={() => { setActiveTab('subscriptions'); setIsCascadeOpen(!isCascadeOpen); }} className={`nav-item ${activeTab === 'subscriptions' ? 'active' : ''}`} style={{ width: '100%' }}>
+            <svg className="nav-icon" viewBox="0 0 24 24"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V4c0-1.1-.9-2-2-2zm-1 7h-2v2h-2V9h-2V7h2V5h2v2h2v2z"/></svg>
             <span>Abonnements {isCascadeOpen ? '▲' : '▼'}</span>
           </button>
 
@@ -746,21 +674,13 @@ function SimulatorApp() {
               <div className="navbar-cascade-loading">Aucun abonnement trouvé</div>
             ) : (
               subscriptions.map((sub) => (
-                <div 
-                  key={sub.id} 
-                  className="nav-sub-item" 
-                  style={{ 
-                    background: selectedChannel?.id === sub.id ? '#333' : 'transparent',
-                    cursor: 'pointer' 
-                  }}
-                  onClick={() => {
-                    setActiveTab('subscriptions');
-                    setSelectedChannel(sub);      
-                    fetchVideosForChannel(sub.id, sub.thumbnail);
-                    setActiveSubTab('standard'); 
-                    router.push(`?channel=${sub.id}`); // ◄ AJOUT : Met à jour l'URL avec l'ID de la chaîne
-                  }}
-                >
+                <div key={sub.id} className="nav-sub-item" style={{ background: selectedChannel?.id === sub.id ? '#333' : 'transparent', cursor: 'pointer' }} onClick={() => {
+                  setActiveTab('subscriptions');
+                  setSelectedChannel(sub);      
+                  fetchVideosForChannel(sub.id, sub.thumbnail);
+                  setActiveSubTab('standard'); 
+                  router.push(`?channel=${sub.id}`);
+                }}>
                   <img src={sub.thumbnail} alt={sub.title} className="nav-sub-avatar" />
                   <span className="nav-sub-name">{sub.title}</span>
                 </div>
@@ -774,26 +694,11 @@ function SimulatorApp() {
           <span>Téléchargements</span>
         </button>
 
-        <button 
-          onClick={() => { setActiveTab('profile'); setIsCascadeOpen(false); }} 
-          className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
-        >
+        <button onClick={() => { setActiveTab('profile'); setIsCascadeOpen(false); }} className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}>
           {user?.user_metadata?.avatar_url ? (
-            <img 
-              src={user.user_metadata.avatar_url} 
-              alt="Mon profil" 
-              className="nav-icon" 
-              style={{ 
-                borderRadius: '50%', 
-                objectFit: 'cover',
-                width: '24px',
-                height: '24px' 
-              }} 
-            />
+            <img src={user.user_metadata.avatar_url} alt="Mon profil" className="nav-icon" style={{ borderRadius: '50%', objectFit: 'cover', width: '24px', height: '24px' }} />
           ) : (
-            <svg className="nav-icon" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-            </svg>
+            <svg className="nav-icon" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
           )}
           <span>Vous</span>
         </button>
@@ -802,7 +707,6 @@ function SimulatorApp() {
   )
 }
 
-// 2. On crée le nouveau point d'entrée "Home" exporté par défaut qui englobe l'app avec Suspense
 export default function Home() {
   return (
     <Suspense fallback={
