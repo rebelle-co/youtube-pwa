@@ -17,6 +17,12 @@
   right: 0;
 }
 
+.user-profile-link{
+  width:32px;
+  height: 32px;
+  display: block;
+}
+
 .header-left { display: flex; align-items: center; gap: 16px; }
 
 .menu-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
