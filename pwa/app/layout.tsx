@@ -9,10 +9,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <SuspenseWrapper>
           <div className="app-layout">
-            <Navbar /> {/* La Navbar est TOUJOURS présente */}
-            <main className="main-content">
-              {children}
-            </main>
+            <div className="app-container">
+              <Navbar /> {/* La Navbar est TOUJOURS présente */}
+              <main className="main-content">
+                {children}
+              </main>
+            </div>
           </div>
         </SuspenseWrapper>
       </body>
