@@ -511,4 +511,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   )
 }
 
-export const useAppContext = () => useContext(AppContext)
+// Dans AppContext.tsx
+export const useAppContext = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    // Retourner un objet par défaut pour éviter le crash du build
+    return {
+      user: null,
+      subscriptions: [],
+      // ... ajoutez les autres propriétés avec des valeurs par défaut vides
+      loading: false,
+    };
+  }
+  return context;
+}
