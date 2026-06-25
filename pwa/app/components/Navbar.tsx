@@ -30,8 +30,8 @@ export default function Navbar({ isOpen }: { isOpen: boolean }) {
     router.push(`/channel/${sub.id}`)
   }
 
-
-  return {}
+  
+  return (
     <nav className={`navbar ${isOpen ? 'expanded' : 'mini'}`}>
       {navItems.map((item) => {
         const isActive = pathname === item.path
