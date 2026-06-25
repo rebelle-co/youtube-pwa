@@ -146,7 +146,7 @@ export default function Home() {
     return (minutes * 60) + seconds <= 60
   }
 
-  // Récupération des vidéos : Focus uniquement sur les 20 dernières vidéos publiées
+  // Récupération des vidéos : Liste complète YouTube -> Affichage Cache DB -> Fetch des manquants seuls
   const fetchVideosForChannel = async (channelId: string, channelThumbnail?: string) => {
     setLoadingVideos(true)
     try {
@@ -156,40 +156,54 @@ export default function Home() {
         return
       }
 
-      // 1. ÉTAPE SYNC : Récupération stricte des 20 derniers IDs depuis YouTube (Pas de boucle infinie !)
+      // 1. ÉTAPE SYNC : On récupère d'abord TOUS les IDs de vidéos depuis la playlist YouTube
       const uploadsPlaylistId = 'UU' + channelId.substring(2)
-      console.log(`[YT Simulator] 🔄 Récupération des 20 dernières vidéos YouTube pour la chaîne ${channelId}...`);
+      let allVideoIds: string[] = []
+      let nextPageToken = ''
+      let hasNextPage = true
 
-      const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=20`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
+      console.log(`[YT Simulator] 🔄 Récupération de la liste des vidéos YouTube pour la chaîne ${channelId}...`);
 
-      if (res.status === 401) {
-        localStorage.removeItem('yt_oauth_token')
-        loginWithGoogle()
-        return
+      while (hasNextPage) {
+        const pageParam = nextPageToken ? `&pageToken=${nextPageToken}` : ''
+        const res = await fetch(
+          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50${pageParam}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+
+        if (res.status === 401) {
+          localStorage.removeItem('yt_oauth_token')
+          loginWithGoogle()
+          return
+        }
+
+        if (!res.ok) throw new Error('Erreur API YouTube Videos Playlist')
+        const data = await res.json()
+        
+        const ids = data.items.map((item: any) => item.snippet.resourceId.videoId)
+        allVideoIds = [...allVideoIds, ...ids]
+
+        if (data.nextPageToken) {
+          nextPageToken = data.nextPageToken
+        } else {
+          hasNextPage = false
+        }
       }
 
-      if (!res.ok) throw new Error('Erreur API YouTube Videos Playlist')
-      const data = await res.json()
-      
-      const recentVideoIds: string[] = data.items ? data.items.map((item: any) => item.snippet.resourceId.videoId) : []
-
-      if (recentVideoIds.length === 0) {
+      if (allVideoIds.length === 0) {
         setVideos([])
         setLoadingVideos(false)
         return
       }
 
-      // 2. VÉRIFICATION DB : On regarde quelles vidéos parmi ces 20 sont DÉJÀ enregistrées
-      console.log(`[YT Simulator] 🔍 Vérification des vidéos existantes en DB (${recentVideoIds.length} IDs analysés)...`);
+      // 2. VÉRIFICATION DB : On regarde quelles vidéos parmi cette liste sont DÉJÀ en base de données
+      console.log(`[YT Simulator] 🔍 Vérification des vidéos existantes en DB (${allVideoIds.length} IDs trouvés)...`);
       const { data: cachedVideos, error: dbError } = await supabase
         .from('videos')
         .select('*')
-        .in('id', recentVideoIds)
+        .in('id', allVideoIds)
 
-      // Règle 1 : On formate et on affiche DIRECTEMENT ce qui est déjà connu en DB
+      // Règle 1 : On formate et on affiche DIRECTEMENT ce qui est déjà en DB
       const formattedCached: YouTubeVideo[] = cachedVideos ? cachedVideos.map((v: any) => ({
         id: v.id,
         title: v.title,
@@ -199,89 +213,96 @@ export default function Home() {
         type: (v.type || 'standard') as SubTabType
       })) : []
 
-      // Tri chronologique décroissant pour le premier rendu visuel
+      // Tri par date décroissante pour le premier affichage
       formattedCached.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
       
       setVideos(formattedCached)
-      setLoadingVideos(false) // UI débloquée instantanément !
+      setLoadingVideos(false) // On coupe le gros loader global car l'utilisateur voit déjà les vidéos en cache !
 
-      // 3. FILTRAGE ET INTEGRATION DES MANQUANTS
+      // 3. FILTRAGE DES MANQUANTS : On isole les IDs qui ne sont PAS en base de données
       const cachedIdsSet = new Set(cachedVideos?.map(v => v.id) || [])
-      const missingVideoIds = recentVideoIds.filter(id => !cachedIdsSet.has(id))
+      const missingVideoIds = allVideoIds.filter(id => !cachedIdsSet.has(id))
 
-      console.log(`[YT Simulator] 📊 Résultat : ${formattedCached.length} en cache, ${missingVideoIds.length} nouvelles vidéos à synchroniser.`);
+      console.log(`[YT Simulator] 📊 Résultat : ${formattedCached.length} vidéos en cache, ${missingVideoIds.length} vidéos manquantes à fetch.`);
 
+      // Règle 2 : S'il y a des vidéos manquantes, on fetch leurs détails et on les insère au compte-goutte
       if (missingVideoIds.length > 0) {
-        console.log(`[YT Simulator] 📥 Fetching des détails pour les ${missingVideoIds.length} vidéos manquantes...`);
+        for (let i = 0; i < missingVideoIds.length; i += 50) {
+          const chunk = missingVideoIds.slice(i, i + 50)
+          console.log(`[YT Simulator] 📥 Fetching des détails pour un chunk de ${chunk.length} vidéos manquantes...`);
 
-        const detailsRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet,statistics&id=${missingVideoIds.join(',')}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
+          const detailsRes = await fetch(
+            `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet,statistics&id=${chunk.join(',')}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
 
-        if (detailsRes.ok) {
-          const detailsData = await detailsRes.json()
+          if (detailsRes.ok) {
+            const detailsData = await detailsRes.json()
 
-          // Classification des types (Shorts vs Standard) via ton API locale
-          const classificationRes = await fetch('/api/classify-videos', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ videoIds: missingVideoIds })
-          })
-
-          let realTypes: Record<string, 'standard' | 'shorts'> = {}
-          if (classificationRes.ok) {
-            realTypes = await classificationRes.json()
-          }
-
-          const dbInserts: any[] = []
-          const formattedChunk: YouTubeVideo[] = []
-
-          detailsData.items.forEach((item: any) => {
-            const finalType = realTypes[item.id] || 'standard'
-            const isShort = finalType === 'shorts'
-
-            const thumbnail = isShort 
-              ? (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '')
-              : (item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '')
-
-            dbInserts.push({
-              id: item.id,
-              title: item.snippet.title,
-              channel_title: item.snippet.channelTitle,
-              channel_id: item.snippet.channelId,
-              thumbnail_url: thumbnail,
-              channel_avatar_url: channelThumbnail || null,
-              duration: item.contentDetails?.duration || null,
-              view_count: item.statistics?.viewCount ? parseInt(item.statistics.viewCount, 10) : 0,
-              published_at: item.snippet.publishedAt,
-              type: finalType
+            // Classification via ton API locale
+            const classificationRes = await fetch('/api/classify-videos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ videoIds: chunk })
             })
 
-            formattedChunk.push({
-              id: item.id,
-              title: item.snippet.title,
-              thumbnail: thumbnail,
-              publishedAt: new Date(item.snippet.publishedAt).toLocaleDateString('fr-FR'),
-              rawPublishedAt: item.snippet.publishedAt,
-              type: finalType
+            let realTypes: Record<string, 'standard' | 'shorts'> = {}
+            if (classificationRes.ok) {
+              realTypes = await classificationRes.json()
+            }
+
+            const dbInserts: any[] = []
+            const formattedChunk: YouTubeVideo[] = []
+
+            detailsData.items.forEach((item: any) => {
+              const finalType = realTypes[item.id] || 'standard'
+              const isShort = finalType === 'shorts'
+
+              const thumbnail = isShort 
+                ? (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '')
+                : (item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '')
+
+              // Préparation pour l'écriture Supabase
+              dbInserts.push({
+                id: item.id,
+                title: item.snippet.title,
+                channel_title: item.snippet.channelTitle,
+                channel_id: item.snippet.channelId,
+                thumbnail_url: thumbnail,
+                channel_avatar_url: channelThumbnail || null,
+                duration: item.contentDetails?.duration || null,
+                view_count: item.statistics?.viewCount ? parseInt(item.statistics.viewCount, 10) : 0,
+                published_at: item.snippet.publishedAt,
+                type: finalType
+              })
+
+              // Préparation pour l'affichage immédiat
+              formattedChunk.push({
+                id: item.id,
+                title: item.snippet.title,
+                thumbnail: thumbnail,
+                publishedAt: new Date(item.snippet.publishedAt).toLocaleDateString('fr-FR'),
+                rawPublishedAt: item.snippet.publishedAt,
+                type: finalType
+              })
             })
-          })
 
-          // Sauvegarde invisible dans Supabase
-          if (dbInserts.length > 0) {
-            const { error: upsertError } = await supabase.from('videos').upsert(dbInserts)
-            if (upsertError) console.error("[YT Simulator] Erreur insertion Supabase :", upsertError)
+            // Écriture en arrière-plan dans Supabase
+            if (dbInserts.length > 0) {
+              const { error: upsertError } = await supabase.from('videos').upsert(dbInserts)
+              if (upsertError) console.error("[YT Simulator] Erreur insertion Supabase :", upsertError)
+            }
+
+            // Injection progressive des nouvelles vidéos dans l'UI avec maintien du tri chronologique
+            setVideos((prevVideos) => {
+              const newCombined = [...prevVideos, ...formattedChunk]
+              // Tri dynamique pour que les nouvelles vidéos s'intègrent à la bonne place
+              return newCombined.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
+            })
           }
-
-          // Injection dynamique dans la liste existante et tri final propre
-          setVideos((prevVideos) => {
-            const newCombined = [...prevVideos, ...formattedChunk]
-            return newCombined.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
-          })
         }
+        console.log(`[YT Simulator] 🎉 Synchronisation complète terminée !`);
       }
-      console.log(`[YT Simulator] 🎉 Fin de la synchronisation ciblée.`);
 
     } catch (err) {
       console.error("[YT Simulator] Erreur lors du traitement des vidéos :", err)
@@ -550,7 +571,7 @@ export default function Home() {
                   onClick={() => {
                     setActiveTab('subscriptions');
                     setSelectedChannel(sub);       
-                    fetchVideosForChannel(sub.id, sub.thumbnail); 
+                    fetchVideosForChannel(sub.id, sub.thumbnail); // Modifié ici pour passer l'avatar de la chaîne
                     setActiveSubTab('standard'); 
                   }}
                 >
