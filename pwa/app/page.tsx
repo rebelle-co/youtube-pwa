@@ -146,7 +146,7 @@ export default function Home() {
     return (minutes * 60) + seconds <= 60
   }
 
-  // Récupération optimisée des vidéos : Comparaison de totaux -> Cache direct -> Fetch ciblé des X derniers
+  // Récupération optimisée : Comparaison de totaux -> Cache direct -> Complétion de l'historique ou des nouveautés
   const fetchVideosForChannel = async (channelId: string, channelThumbnail?: string) => {
     setLoadingVideos(true)
     try {
@@ -156,7 +156,7 @@ export default function Home() {
         return
       }
 
-      // 1. CHARGEMENT IMMÉDIAT DE LA DB DU CANAL SÉLECTIONNÉ
+      // 1. CHARGEMENT IMMÉDIAT DE LA DB (Affichage instantané pour l'utilisateur)
       console.log(`[YT Simulator] 🔍 Récupération des vidéos existantes en DB pour le canal ${channelId}...`);
       const { data: cachedVideos, error: dbError } = await supabase
         .from('videos')
@@ -172,11 +172,11 @@ export default function Home() {
         type: (v.type || 'standard') as SubTabType
       })) : []
 
-      // Tri chronologique décroissant immédiat pour l'expérience utilisateur
+      // Tri chronologique immédiat
       formattedCached.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
       setVideos(formattedCached)
 
-      // 2. FETCH DU NOMBRE TOTAL DE VIDÉOS DEPUIS L'API YOUTUBE CHANNELS
+      // 2. VÉRIFICATION DU COMPTEUR TOTAL DE LA CHAÎNE
       console.log(`[YT Simulator] 🛰️ Vérification des compteurs de vidéos...`);
       const channelStatsRes = await fetch(
         `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}`,
@@ -197,43 +197,56 @@ export default function Home() {
 
       console.log(`[YT Simulator] 📊 Comparatif Totaux -> YouTube: ${ytVideoCount} | Base de données: ${dbVideoCount}`);
 
-      // CONDITION DE SORTIE : Si les totaux concordent, on n'appelle pas l'API de Playlist !
+      // CONDITION DE SORTIE : Si la DB est synchro avec YouTube, on stoppe TOUT ici ! (Zéro fetch de playlist)
       if (ytVideoCount === dbVideoCount) {
         console.log(`[YT Simulator] ✅ Synchro parfaite détectée (${ytVideoCount} vidéos). Rendu basé sur la DB locale.`);
         setLoadingVideos(false)
         return
       }
 
-      // 3. FETCH UNIQUEMENT DES DERNIÈRES VIDÉOS POSTÉES (Les 50 dernières max pour vérifier les nouveautés)
-      console.log(`[YT Simulator] 🔄 Différence détectée. Analyse de la première page d'uploads...`);
+      // 3. PARCOURS DE TOUTES LES PAGES (Uniquement s'il y a une différence pour combler les trous)
+      console.log(`[YT Simulator] 🔄 Différence détectée. Récupération de la liste complète pour synchronisation...`);
       const uploadsPlaylistId = 'UU' + channelId.substring(2)
-      
-      const res = await fetch(
-        `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
+      let allPlaylistVideoIds: string[] = []
+      let nextPageToken = ''
+      let hasNextPage = true
 
-      if (!res.ok) throw new Error('Erreur API YouTube Videos Playlist')
-      const data = await res.json()
-      
-      const latestVideoIds: string[] = data.items.map((item: any) => item.snippet.resourceId.videoId)
+      while (hasNextPage) {
+        const pageParam = nextPageToken ? `&pageToken=${nextPageToken}` : ''
+        const res = await fetch(
+          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50${pageParam}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
 
-      if (latestVideoIds.length === 0) {
+        if (!res.ok) throw new Error('Erreur API YouTube Videos Playlist')
+        const data = await res.json()
+        
+        const ids = data.items.map((item: any) => item.snippet.resourceId.videoId)
+        allPlaylistVideoIds = [...allPlaylistVideoIds, ...ids]
+
+        if (data.nextPageToken) {
+          nextPageToken = data.nextPageToken
+        } else {
+          hasNextPage = false
+        }
+      }
+
+      if (allPlaylistVideoIds.length === 0) {
         setLoadingVideos(false)
         return
       }
 
-      // 4. ISOLEMENT DES NOUVELLES VIDÉOS NON CACHÉES EN DB
+      // 4. FILTRAGE DES VIDÉOS RÉELLEMENT MANQUANTES (Anciennes ou nouvelles)
       const cachedIdsSet = new Set(formattedCached.map(v => v.id))
-      const missingVideoIds = latestVideoIds.filter(id => !cachedIdsSet.has(id))
+      const missingVideoIds = allPlaylistVideoIds.filter(id => !cachedIdsSet.has(id))
 
-      console.log(`[YT Simulator] 📊 Résultat : ${missingVideoIds.length} nouvelles vidéos manquantes à intégrer.`);
+      console.log(`[YT Simulator] 📊 Résultat : ${missingVideoIds.length} vidéos manquantes à intégrer.`);
 
-      // 5. TRAITEMENT ET INJECTION PROGRESSIVE DES VIDÉOS MANQUANTES
+      // 5. FETCH PROGRESSIF ET INJECTION À LA VOLÉE
       if (missingVideoIds.length > 0) {
         for (let i = 0; i < missingVideoIds.length; i += 50) {
           const chunk = missingVideoIds.slice(i, i + 50)
-          console.log(`[YT Simulator] 📥 Extraction des détails pour le lot de ${chunk.length} vidéos...`);
+          console.log(`[YT Simulator] 📥 Fetching des détails pour un chunk de ${chunk.length} vidéos manquantes...`);
 
           const detailsRes = await fetch(
             `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet,statistics&id=${chunk.join(',')}`,
@@ -266,7 +279,6 @@ export default function Home() {
                 ? (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '')
                 : (item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '')
 
-              // Structure d'écriture Supabase
               dbInserts.push({
                 id: item.id,
                 title: item.snippet.title,
@@ -280,7 +292,6 @@ export default function Home() {
                 type: finalType
               })
 
-              // Structure pour l'affichage réactif immédiat
               formattedChunk.push({
                 id: item.id,
                 title: item.snippet.title,
@@ -291,20 +302,20 @@ export default function Home() {
               })
             })
 
-            // Sauvegarde sécurisée en tâche de fond dans Supabase
+            // Écriture en arrière-plan
             if (dbInserts.length > 0) {
               const { error: upsertError } = await supabase.from('videos').upsert(dbInserts)
               if (upsertError) console.error("[YT Simulator] Erreur insertion Supabase :", upsertError)
             }
 
-            // Injection et ré-ordonnancement fluide à la volée dans la grille UI
+            // Injection progressive dans la grille sans casser le rendu actuel
             setVideos((prevVideos) => {
               const newCombined = [...prevVideos, ...formattedChunk]
               return newCombined.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
             })
           }
         }
-        console.log(`[YT Simulator] 🎉 Synchronisation et injection terminées !`);
+        console.log(`[YT Simulator] 🎉 Synchronisation complète terminée !`);
       }
 
     } catch (err) {
