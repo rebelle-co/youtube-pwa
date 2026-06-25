@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAppContext } from '../context/AppContext'
 import { YouTubeSubscription } from '../types/youtube'
-import "./styles/login.css"
+import "@/styles/login.css"
 
 export default function Navbar() {
   const [isCascadeOpen, setIsCascadeOpen] = useState(false)
