@@ -618,14 +618,14 @@ function SimulatorApp() {
                   </button>
                 </div>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '0 4px', fontFamily: 'Roboto, "Arial", sans-serif', fontSize: '13px' }}>
-                  <button onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'recent' }))} style={{ background: 'none', border: 'none', color: currentFilter === 'recent' ? '#fff' : '#666', fontWeight: currentFilter === 'recent' ? 'bold' : 'normal', cursor: 'pointer', padding: '5px 0', fontFamily: 'inherit' }}>
+                <div style={{ display: 'flex', gap:25, alignItems: 'center', marginBottom: '20px', padding: '0 4px', fontFamily: 'Roboto, "Arial", sans-serif', fontSize: '13px' }}>
+                  <button onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'recent' }))} style={{ background: currentFilter === 'recent' ? '#fff' : 'none', border: 'none', color: currentFilter === 'recent' ? '#111' : '#fff', fontWeight: currentFilter === 'recent' ? 'bold' : 'normal', cursor: 'pointer', padding: '10px', fontFamily: 'inherit', borderRadius:18 }}>
                     Les plus récentes
                   </button>
-                  <button onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'popular' }))} style={{ background: 'none', border: 'none', color: currentFilter === 'popular' ? '#fff' : '#666', fontWeight: currentFilter === 'popular' ? 'bold' : 'normal', cursor: 'pointer', padding: '5px 0', fontFamily: 'inherit' }}>
+                  <button onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'popular' }))} style={{ background: currentFilter === 'popular' ? '#fff' : 'none', border: 'none', color: currentFilter === 'popular' ? '#111' : '#fff', fontWeight: currentFilter === 'popular' ? 'bold' : 'normal', cursor: 'pointer', padding: '10px', fontFamily: 'inherit', borderRadius:18 }}>
                     Populaires
                   </button>
-                  <button onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'old' }))} style={{ background: 'none', border: 'none', color: currentFilter === 'old' ? '#fff' : '#666', fontWeight: currentFilter === 'old' ? 'bold' : 'normal', cursor: 'pointer', padding: '5px 0', fontFamily: 'inherit' }}>
+                  <button onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'old' }))} style={{ background: currentFilter === 'old' ? '#fff' : 'none', border: 'none', color: currentFilter === 'old' ? '#111' : '#fff', fontWeight: currentFilter === 'old' ? 'bold' : 'normal', cursor: 'pointer', padding: '5px 0', fontFamily: 'inherit', borderRadius:18 }}>
                     Les plus anciennes
                   </button>
                 </div>
