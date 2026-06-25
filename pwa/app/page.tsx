@@ -145,16 +145,38 @@ export default function Home() {
     return (minutes * 60) + seconds <= 60
   }
 
-  // Récupération de TOUTES les vidéos d'une chaîne + triage Shorts vs Standard
-  const fetchVideosForChannel = async (channelId: string) => {
-    const token = localStorage.getItem('yt_oauth_token')
-    if (!token) {
-      loginWithGoogle()
-      return
-    }
-
+  // Récupération des vidéos : Supabase d'abord, API YouTube en Fallback + enregistrement DB
+  const fetchVideosForChannel = async (channelId: string, channelThumbnail?: string) => {
     setLoadingVideos(true)
     try {
+      // 1. STRATÉGIE CACHE : On regarde d'abord si les vidéos de cette chaîne existent dans Supabase
+      const { data: cachedVideos, error: dbError } = await supabase
+        .from('videos')
+        .select('*')
+        .eq('channel_id', channelId)
+        .order('published_at', { ascending: false })
+
+      if (cachedVideos && cachedVideos.length > 0) {
+        console.log(`[YT Simulator] 💾 Données récupérées du cache Supabase (${cachedVideos.length} vidéos)`);
+        const formatted = cachedVideos.map((v: any) => ({
+          id: v.id,
+          title: v.title,
+          thumbnail: v.thumbnail_url,
+          publishedAt: new Date(v.published_at).toLocaleDateString('fr-FR'),
+          type: (v.type || 'standard') as SubTabType
+        }))
+        setVideos(formatted)
+        setLoadingVideos(false)
+        return // On stoppe ici, pas besoin d'appeler YouTube !
+      }
+
+      // 2. FALLBACK API YOUTUBE : Si pas de données en DB, on fetch sur YouTube
+      const token = localStorage.getItem('yt_oauth_token')
+      if (!token) {
+        loginWithGoogle()
+        return
+      }
+
       const uploadsPlaylistId = 'UU' + channelId.substring(2)
       let rawItems: any[] = []
       let nextPageToken = ''
@@ -196,15 +218,16 @@ export default function Home() {
 
       for (let i = 0; i < videoIds.length; i += 50) {
         const chunk = videoIds.slice(i, i + 50)
+        // Ajout de "statistics" dans le part pour récupérer le viewCount demandé pour la base de données
         const detailsRes = await fetch(
-          `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet&id=${chunk.join(',')}`,
+          `https://www.googleapis.com/youtube/v3/videos?part=contentDetails,snippet,statistics&id=${chunk.join(',')}`,
           { headers: { Authorization: `Bearer ${token}` } }
         )
 
         if (detailsRes.ok) {
           const detailsData = await detailsRes.json()
 
-          // INTERCEPTOR : Classification en temps réel via notre route API locale (évite le CORS)
+          // Classification en temps réel via notre route API locale (évite le CORS)
           const classificationRes = await fetch('/api/classify-videos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -216,27 +239,51 @@ export default function Home() {
             realTypes = await classificationRes.json()
           }
           
+          const dbInserts: any[] = []
+
           const formattedChunk = detailsData.items.map((item: any) => {
-            // Utilise la vraie classification, ou 'standard' par défaut si l'API échoue
             const finalType = realTypes[item.id] || 'standard'
             const isShort = finalType === 'shorts'
+
+            const thumbnail = isShort 
+              ? (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '')
+              : (item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '')
+
+            // Préparation des données complètes requises pour remplir la table `videos` de Supabase
+            dbInserts.push({
+              id: item.id,
+              title: item.snippet.title,
+              channel_title: item.snippet.channelTitle,
+              channel_id: item.snippet.channelId,
+              thumbnail_url: thumbnail,
+              channel_avatar_url: channelThumbnail || null, // Récupéré lors du clic sur le menu déroulant
+              duration: item.contentDetails?.duration || null,
+              view_count: item.statistics?.viewCount ? parseInt(item.statistics.viewCount, 10) : 0,
+              published_at: item.snippet.publishedAt,
+              type: finalType
+            })
 
             return {
               id: item.id,
               title: item.snippet.title,
-              thumbnail: isShort 
-                ? (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '')
-                : (item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || ''),
+              thumbnail: thumbnail,
               publishedAt: new Date(item.snippet.publishedAt).toLocaleDateString('fr-FR'),
               type: finalType
             }
           })
+
+          // Sauvegarde en masse dans Supabase. "upsert" met à jour si la vidéo existe déjà ou l'insère sinon.
+          if (dbInserts.length > 0) {
+            const { error: upsertError } = await supabase.from('videos').upsert(dbInserts)
+            if (upsertError) console.error("[YT Simulator] Erreur insertion Supabase :", upsertError)
+          }
+
           detailedVideos = [...detailedVideos, ...formattedChunk]
         }
       }
 
       setVideos(detailedVideos)
-      console.log(`[YT Simulator] 📺 Flux trié chargé : ${detailedVideos.length} vidéos trouvées.`);
+      console.log(`[YT Simulator] 📺 YouTube API appelé : Flux enregistré en DB (${detailedVideos.length} vidéos).`);
     } catch (err) {
       console.error("[YT Simulator] Erreur lors du fetch des vidéos :", err)
     } finally {
@@ -504,7 +551,7 @@ export default function Home() {
                   onClick={() => {
                     setActiveTab('subscriptions');
                     setSelectedChannel(sub);       
-                    fetchVideosForChannel(sub.id); 
+                    fetchVideosForChannel(sub.id, sub.thumbnail); // Modifié ici pour passer l'avatar de la chaîne
                     setActiveSubTab('standard'); 
                   }}
                 >
