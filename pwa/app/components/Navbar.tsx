@@ -22,7 +22,14 @@ export default function Navbar() {
 
   return (
     <nav className="navbar">
-      <Link href="/" className="nav-item">Accueil</Link>
+      <button 
+        onClick={() => {
+          router.push('/');
+        }} 
+        className="nav-item"
+      >
+         Accueil
+      </button>
 
       <div className="nav-item-wrapper">
         {/* BOUTON ABONNEMENTS : Redirige vers /subscriptions ET toggle l'accordéon */}
@@ -51,8 +58,23 @@ export default function Navbar() {
         </div>
       </div>
 
-      <Link href="/downloads" className="nav-item">Téléchargements</Link>
-      <Link href="/profile" className="nav-item">Vous</Link>
+      <button 
+        onClick={() => {
+          router.push('/downloads');
+        }} 
+        className="nav-item"
+      >
+         Téléchargements
+      </button>
+
+      <button 
+        onClick={() => {
+          router.push('/profile');
+        }} 
+        className="nav-item"
+      >
+         Vous
+      </button>
     </nav>
   )
 }
