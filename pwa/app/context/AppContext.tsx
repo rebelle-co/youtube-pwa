@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { YouTubeSubscription } from '../types/youtube'
 
 
 const AppContext = createContext<any>(null)
@@ -10,11 +11,6 @@ type TabType = 'accueil' | 'downloads' | 'subscriptions' | 'profile'
 type SubTabType = 'standard' | 'shorts'
 type FilterType = 'recent' | 'popular' | 'old'
 
-interface YouTubeSubscription {
-  id: string
-  title: string
-  thumbnail: string
-}
 
 interface YouTubeVideo {
   id: string
