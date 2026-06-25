@@ -1,8 +1,5 @@
 'use client'
-
-import Navbar from "./components/Navbar"
-import { AppProvider, useAppContext } from "./context/AppContext"
-
+import { useAppContext } from "./context/AppContext"
 
 export default function HomePage() {
   const { user, loginWithGoogle } = useAppContext()
@@ -11,8 +8,8 @@ export default function HomePage() {
     return (
       <main className="auth-wrapper">
         <div className="auth-card">
-          <div className="site-brand"><span>🔻</span> YT Premium Simulator</div>
-          <button onClick={loginWithGoogle} className="btn-google">Se connecter</button>
+          <h1>Bienvenue sur YT Simulator</h1>
+          <button onClick={loginWithGoogle}>Se connecter avec Google</button>
         </div>
       </main>
     )
@@ -20,8 +17,8 @@ export default function HomePage() {
 
   return (
     <section>
-      <Navbar/>
-  
+      <h1>Accueil</h1>
+      <p>Contenu de l'accueil...</p>
     </section>
   )
 }
