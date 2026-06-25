@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./styles/global.css";
 import { AppProvider } from './context/AppContext'
+import SuspenseWrapper from "./components/SuspenseWrapper";
 // Importez ici votre composant de Navbar si vous l'avez extrait, 
 // ou gardez-le ici si vous préférez.
 
@@ -20,7 +21,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <AppProvider>
-          {children}
+          <SuspenseWrapper>
+            {children}
+          </SuspenseWrapper>
         </AppProvider>
       </body>
     </html>
