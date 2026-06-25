@@ -537,15 +537,15 @@ function SimulatorApp() {
                   allowFullScreen
                 ></iframe>
               </div>
-              <h1 style={{ fontSize: '18px', margin: '14px 0 10px 0', color: '#fff', fontWeight: 'bold' }}>{currentVideo.title}</h1>
+              <h1 style={{ fontSize: '18px', margin: '14px 0 10px 0', color: '#fff', fontWeight: 'bold', fontFamily: 'Roboto, "Arial", sans-serif' }}>{currentVideo.title}</h1>
               
               {/* Informations Créateur & Boutons d'interactions */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <img src={selectedChannel?.thumbnail || user.user_metadata?.avatar_url} alt="Avatar" style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
                   <div>
-                    <h3 style={{ fontSize: '15px', margin: 0, color: '#fff' }}>{selectedChannel?.title || "Chaîne YouTube"}</h3>
-                    <span style={{ fontSize: '12px', color: '#aaa' }}>{formatViews(currentVideo.viewCount)}</span>
+                    <h3 style={{ fontSize: '15px', margin: 0, color: '#fff', fontFamily: 'Roboto, "Arial", sans-serif'}}>{selectedChannel?.title || "Chaîne YouTube"}</h3>
+                    <span style={{ fontSize: '12px', color: '#aaa', fontFamily: 'Roboto, "Arial", sans-serif' }}>{formatViews(currentVideo.viewCount)}</span>
                   </div>
                   <button 
                     onClick={() => handleToggleSubscribe(selectedChannel?.id || '')}
