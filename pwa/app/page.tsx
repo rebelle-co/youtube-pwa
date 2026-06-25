@@ -43,7 +43,6 @@ export default function Home() {
     console.log("[YT Simulator] 🚀 Initialisation du composant");
 
     const initializeAuth = async () => {
-      // 1. On récupère la session initiale de manière asynchrone et isolée
       const { data: { session } } = await supabase.auth.getSession()
       
       if (session?.provider_token) {
@@ -60,7 +59,6 @@ export default function Home() {
           fetchYouTubeSubscriptions(savedToken)
         } else {
           console.warn("[YT Simulator] ❌ Utilisateur connecté mais aucun token Google trouvé. Relance automatique du flux...");
-          // Si la session Supabase est active mais le token Google est mort, on réactualise le flux de manière transparente
           loginWithGoogle()
           return
         }
@@ -70,7 +68,6 @@ export default function Home() {
 
     initializeAuth()
 
-    // 2. On écoute uniquement les ÉVÉNEMENTS futurs (ex: clic sur login, déconnexion) pour éviter les doublons au montage
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log(`[YT Simulator] ⚡ Événement Auth détecté: ${event}`);
       
@@ -106,7 +103,7 @@ export default function Home() {
         if (res.status === 401) {
           console.warn("[YT Simulator] ⏰ Le token Google a expiré. Nettoyage et demande de reconnexion.")
           localStorage.removeItem('yt_oauth_token')
-          loginWithGoogle() // Relance automatique en cas d'expiration soudaine en pleine session
+          loginWithGoogle()
           return
         }
 
@@ -138,17 +135,14 @@ export default function Home() {
     }
   }
 
-  // Helper pour parser la durée ISO 8601 de YouTube (ex: PT1M15S) et vérifier si c'est un Short (<= 60s)
+  // Conservé pour ne rien casser, mais remplacé par la validation serveur en temps réel
   const checkIfShort = (isoDuration: string): boolean => {
     if (!isoDuration || isoDuration.includes('H')) return false 
     const minutesMatch = isoDuration.match(/(\d+)M/)
     const secondsMatch = isoDuration.match(/(\d+)S/)
-    
     const minutes = minutesMatch ? parseInt(minutesMatch[1], 10) : 0
     const seconds = secondsMatch ? parseInt(secondsMatch[1], 10) : 0
-    
-    const totalSeconds = (minutes * 60) + seconds
-    return totalSeconds <= 60
+    return (minutes * 60) + seconds <= 60
   }
 
   // Récupération de TOUTES les vidéos d'une chaîne + triage Shorts vs Standard
@@ -209,9 +203,23 @@ export default function Home() {
 
         if (detailsRes.ok) {
           const detailsData = await detailsRes.json()
+
+          // INTERCEPTOR : Classification en temps réel via notre route API locale (évite le CORS)
+          const classificationRes = await fetch('/api/classify-videos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoIds: chunk })
+          })
+
+          let realTypes: Record<string, 'standard' | 'shorts'> = {}
+          if (classificationRes.ok) {
+            realTypes = await classificationRes.json()
+          }
+          
           const formattedChunk = detailsData.items.map((item: any) => {
-            const duration = item.contentDetails?.duration || ''
-            const isShort = checkIfShort(duration)
+            // Utilise la vraie classification, ou 'standard' par défaut si l'API échoue
+            const finalType = realTypes[item.id] || 'standard'
+            const isShort = finalType === 'shorts'
 
             return {
               id: item.id,
@@ -220,7 +228,7 @@ export default function Home() {
                 ? (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '')
                 : (item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || ''),
               publishedAt: new Date(item.snippet.publishedAt).toLocaleDateString('fr-FR'),
-              type: isShort ? 'shorts' : 'standard'
+              type: finalType
             }
           })
           detailedVideos = [...detailedVideos, ...formattedChunk]
@@ -244,7 +252,7 @@ export default function Home() {
         scopes: 'https://www.googleapis.com/auth/youtube.readonly',
         queryParams: {
           access_type: 'offline',
-          prompt: 'select_account' // Permet une reconnexion quasi invisible (silencieuse) sans forcer l'écran de consentement à chaque fois
+          prompt: 'select_account' 
         }
       },
     })
