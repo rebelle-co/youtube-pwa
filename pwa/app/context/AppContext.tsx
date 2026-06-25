@@ -79,8 +79,6 @@ const formatViews = (views?: number): string => {
 export function AppProvider({ children }: { children: ReactNode }) {
 
   const router = useRouter()
-  const searchParams = useSearchParams() 
-  const channelParam = searchParams.get('channel')
   
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
@@ -464,18 +462,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  // Restauration de la chaîne active depuis l'URL
-  useEffect(() => {
-    if (subscriptions.length > 0 && channelParam && !selectedChannel) {
-      const savedChannel = subscriptions.find(sub => sub.id === channelParam)
-      if (savedChannel) {
-        setSelectedChannel(savedChannel)
-        setActiveTab('subscriptions')
-        setIsCascadeOpen(true) 
-        fetchVideosForChannel(savedChannel.id, savedChannel.thumbnail)
-      }
-    }
-  }, [subscriptions, channelParam, selectedChannel])
 
   return (
     <AppContext.Provider value={{ 

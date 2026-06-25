@@ -2,7 +2,6 @@
 import { Suspense, useState } from 'react';
 import Navbar from "./components/Navbar";
 import Header from "./components/Header";
-import SuspenseWrapper from "./components/SuspenseWrapper";
 import "./styles/global.css";
 import "./styles/login.css";
 import { Providers } from './providers';
@@ -15,9 +14,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <body style={{margin:0}}>
         <Providers>
-          {/* On ajoute le Suspense ici pour protéger l'utilisation de useSearchParams */}
+          {/* Suspense est OBLIGATOIRE pour tout composant utilisant useSearchParams */}
           <Suspense fallback={null}>
-            <ParamsHandler /> 
+            <ParamsHandler />
           </Suspense>
           <LayoutContent>{children}</LayoutContent>
         </Providers>
