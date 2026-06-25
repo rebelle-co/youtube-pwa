@@ -11,17 +11,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="fr">
-      <body>
+      <body style={{margin:0}}>
         <SuspenseWrapper>
-          <div className="app-layout">
-            <Header toggleNavbar={() => setIsNavOpen(!isNavOpen)} />
+          <Header toggleNavbar={() => setIsNavOpen(!isNavOpen)} />
             <div className={`app-container ${isNavOpen ? 'nav-open' : 'nav-closed'}`}>
               {isNavOpen && <Navbar />}
-              <main className="main-content">
-                {children}
-              </main>
+                <main className="main-content">
+                  {children}
+                </main>
             </div>
-          </div>
         </SuspenseWrapper>
       </body>
     </html>
