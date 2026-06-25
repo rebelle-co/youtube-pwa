@@ -14,10 +14,10 @@ export default function Navbar({ isOpen }: { isOpen: boolean }) {
   const router = useRouter()
   const { subscriptions, fetchVideosForChannel, setSelectedChannel, setActiveSubTab } = useAppContext()
   const navItems = [
-    { name: 'Accueil', path: '/', icon: '/assets/home.svg', activeIcon: '/assets/is-home.svg' },
-    { name: 'Abonnements', path: '/subscriptions', icon: '/assets/subscribes.svg', activeIcon: '/assets/subscribes.svg' }, // Même icône si pas de version "is-sub"
-    { name: 'Téléchargements', path: '/downloads', icon: '/assets/home.svg', activeIcon: '/assets/is-home.svg' }, // Remplacez par vos fichiers
-    { name: 'Vous', path: '/profile', icon: '/assets/you.svg', activeIcon: '/assets/is-you.svg' },
+    { name: 'Accueil', path: '/', icon: './../assets/home.svg', activeIcon: './../assets/is-home.svg' },
+    { name: 'Abonnements', path: './../subscriptions', icon: './../assets/subscribes.svg', activeIcon: './../assets/subscribes.svg' }, // Même icône si pas de version "is-sub"
+    { name: 'Téléchargements', path: '/downloads', icon: './../assets/home.svg', activeIcon: './../assets/is-home.svg' }, // Remplacez par vos fichiers
+    { name: 'Vous', path: '/profile', icon: './../assets/you.svg', activeIcon: './../assets/is-you.svg' },
   ]
   const pathname = usePathname() // <-- Déclaration ajoutée
 
