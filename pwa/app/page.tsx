@@ -48,7 +48,7 @@ const getRelativeTime = (isoString: string): string => {
   if (diffDays < 7) return `${diffDays} jour${diffDays > 1 ? 's' : ''}`
   if (diffWeeks < 4) return `${diffWeeks} semaine${diffWeeks > 1 ? 's' : ''}`
   if (diffMonths < 12) return `${diffMonths} mois`
-  return `${diffYears} année${diffYears > 1 ? 's' : ''}`
+  return `${diffYears} an${diffYears > 1 ? 's' : ''}`
 }
 
 // FORMATTEUR DE DURÉE ISO 8601 (Ex: PT1H23M45S -> 1:23:45)
@@ -74,7 +74,7 @@ const parseISODuration = (isoDuration: string): string => {
 // FORMATTEUR DU COMPTEUR DE VUES COMPACT
 const formatViews = (views?: number): string => {
   if (!views) return '0 vue'
-  if (views >= 1000000) return `${(views / 1000000).toFixed(1).replace('.', ' ')} M de vues`
+  if (views >= 1000000) return `${(views / 1000000).toFixed(1).replace('.', '.')} M de vues`
   if (views >= 1000) return `${(views / 1000).toFixed(0)} k vues`
   return `${views} vue${views > 1 ? 's' : ''}`
 }
