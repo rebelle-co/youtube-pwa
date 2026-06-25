@@ -1,3 +1,37 @@
 .watch-on-youtube-button-wrapper{
   display: none!important;
 }
+
+.yt-header {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 56px;
+  background: #0f0f0f;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 1000;
+}
+
+.header-left { display: flex; align-items: center; gap: 16px; }
+
+.menu-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
+
+.header-center { flex: 1; max-width: 600px; display: flex; margin: 0 40px; }
+
+.search-input { 
+  flex: 1; background: #121212; border: 1px solid #303030; 
+  padding: 8px 16px; border-radius: 20px 0 0 20px; color: white; 
+}
+
+.search-btn { background: #222; border: 1px solid #303030; padding: 0 20px; border-radius: 0 20px 20px 0; cursor: pointer; }
+
+.user-avatar { width: 32px; height: 32px; border-radius: 50%; }
+
+/* Gestion de l'ouverture de la nav */
+.app-container { display: flex; margin-top: 56px; }
+.nav-closed .navbar { display: none; }
+.nav-open .navbar { width: 240px; }
+.main-content { flex: 1; padding: 20px; }
