@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { User } from '@supabase/supabase-js'
+import { useRouter, useSearchParams } from 'next/navigation' // ◄ AJOUT : Imports Next.js Navigation
 import './styles/login.css'
 
 type TabType = 'accueil' | 'downloads' | 'subscriptions' | 'profile'
@@ -19,14 +20,13 @@ interface YouTubeVideo {
   id: string
   title: string
   thumbnail: string
-  publishedAt: string     // Version lisible (ex: "25/06/2026")
-  rawPublishedAt: string  // Version ISO pour le tri (ex: "2026-06-25T09:00:00Z")
+  publishedAt: string     
+  rawPublishedAt: string  
   type: SubTabType
-  duration?: string       // Formatée (ex: "14:22")
-  viewCount?: number      // Nombre brut pour le tri populaire
+  duration?: string       
+  viewCount?: number      
 }
 
-// FORMATTEUR DE TEMPS RELATIF
 const getRelativeTime = (isoString: string): string => {
   if (!isoString) return "à l'instant"
   const now = new Date()
@@ -51,7 +51,6 @@ const getRelativeTime = (isoString: string): string => {
   return `${diffYears} an${diffYears > 1 ? 's' : ''}`
 }
 
-// FORMATTEUR DE DURÉE ISO 8601 (Ex: PT1H23M45S -> 1:23:45)
 const parseISODuration = (isoDuration: string): string => {
   if (!isoDuration) return ''
   const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/)
@@ -71,7 +70,6 @@ const parseISODuration = (isoDuration: string): string => {
   return parts.join(':')
 }
 
-// FORMATTEUR DU COMPTEUR DE VUES COMPACT
 const formatViews = (views?: number): string => {
   if (!views) return '0 vue'
   if (views >= 1000000) return `${(views / 1000000).toFixed(1).replace('.', '.')} M de vues`
@@ -80,12 +78,15 @@ const formatViews = (views?: number): string => {
 }
 
 export default function Home() {
+  const router = useRouter() // ◄ AJOUT : Initialisation du router
+  const searchParams = useSearchParams() // ◄ AJOUT : Lecture des paramètres d'URL
+  const channelParam = searchParams.get('channel') // ◄ AJOUT : Récupération du paramètre ?channel=...
+
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabType>('accueil')
   const [activeSubTab, setActiveSubTab] = useState<SubTabType>('standard')
   
-  // États de filtrage désynchronisés (Chaque onglet possède son propre état de tri indépendant)
   const [filters, setFilters] = useState<Record<SubTabType, FilterType>>({
     standard: 'recent',
     shorts: 'recent'
@@ -99,6 +100,7 @@ export default function Home() {
   const [videos, setVideos] = useState<YouTubeVideo[]>([])
   const [loadingVideos, setLoadingVideos] = useState(false)
 
+  // ÉFFET 1 : Initialisation de l'authentification
   useEffect(() => {
     console.log("[YT Simulator] 🚀 Initialisation du composant");
 
@@ -144,6 +146,20 @@ export default function Home() {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // ◄ AJOUT : ÉFFET 2 : Restauration de la chaîne active depuis l'URL après un reload
+  useEffect(() => {
+    if (subscriptions.length > 0 && channelParam && !selectedChannel) {
+      const savedChannel = subscriptions.find(sub => sub.id === channelParam)
+      if (savedChannel) {
+        console.log(`[YT Simulator] 🔄 Restauration de la chaîne active depuis l'URL : ${savedChannel.title}`);
+        setSelectedChannel(savedChannel)
+        setActiveTab('subscriptions')
+        setIsCascadeOpen(true) // Optionnel : ouvre l'accordéon pour montrer la sélection
+        fetchVideosForChannel(savedChannel.id, savedChannel.thumbnail)
+      }
+    }
+  }, [subscriptions, channelParam, selectedChannel])
 
   const fetchYouTubeSubscriptions = async (token: string) => {
     setLoadingSubs(true)
@@ -229,7 +245,6 @@ export default function Home() {
         viewCount: v.view_count || 0
       })) : []
 
-      // Tri par défaut chronologique
       formattedCached.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
       setVideos(formattedCached)
 
@@ -400,6 +415,7 @@ export default function Home() {
     setIsCascadeOpen(false)
     setActiveTab('accueil')
     setActiveSubTab('standard')
+    router.push('/') // ◄ AJOUT : Nettoie les query params de l'URL à la déconnexion
   }
 
   if (loading) {
@@ -428,7 +444,6 @@ export default function Home() {
     )
   }
 
-  // Filtrage par type (standard / shorts) PUIS application du tri désynchronisé
   const currentFilter = filters[activeSubTab]
   const processedVideos = videos
     .filter(video => video.type === activeSubTab)
@@ -469,7 +484,6 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Sub-tabs d'onglets de types */}
                 <div style={{ display: 'flex', gap: '20px', marginBottom: '15px', borderBottom: '1px solid #222' }}>
                   <button 
                     onClick={() => setActiveSubTab('standard')} 
@@ -505,7 +519,6 @@ export default function Home() {
                   </button>
                 </div>
 
-                {/* LIGNE DE FILTRAGE SUR LA MÊME LIGNE ET DÉSYNCHRONISÉE */}
                 <div style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -578,7 +591,6 @@ export default function Home() {
                         style={{ background: '#1a1a1a', borderRadius: '8px', overflow: 'hidden', border: '1px solid #333', cursor: 'pointer' }} 
                         onClick={() => console.log("Lecture de la vidéo :", video.id)}
                       >
-                        {/* Wrapper de la miniature pour superposer le temps absolu */}
                         <div style={{ position: 'relative', width: '100%', aspectRatio: activeSubTab === 'shorts' ? '9/16' : '16/9' }}>
                           <img 
                             src={video.thumbnail} 
@@ -607,7 +619,6 @@ export default function Home() {
                           )}
                         </div>
 
-                        {/* Conteneur des textes */}
                         <div style={{ padding: '12px' }}>
                           <h4 style={{ 
                             margin: '0 0 6px 0', 
@@ -624,7 +635,6 @@ export default function Home() {
                             {video.title}
                           </h4>
                           
-                          {/* Ligne d'infos complémentaires alignées sur la même ligne */}
                           <div style={{ 
                             display: 'flex', 
                             alignItems: 'center', 
@@ -744,6 +754,7 @@ export default function Home() {
                     setSelectedChannel(sub);      
                     fetchVideosForChannel(sub.id, sub.thumbnail);
                     setActiveSubTab('standard'); 
+                    router.push(`?channel=${sub.id}`); // ◄ AJOUT : Met à jour l'URL avec l'ID de la chaîne
                   }}
                 >
                   <img src={sub.thumbnail} alt={sub.title} className="nav-sub-avatar" />
@@ -777,12 +788,11 @@ export default function Home() {
             />
           ) : (
             <svg className="nav-icon" viewBox="0 0 24 24">
-              <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
             </svg>
           )}
-          <span>Profil</span>
+          <span>Vous</span>
         </button>
-
       </nav>
     </div>
   )
