@@ -383,30 +383,58 @@ function SimulatorApp() {
     fetchUserPlaylists() // Rafraîchir
   }
 
+  const addVideoToPlaylist = async (playlistId: string, videoId: string) => {
+    const token = localStorage.getItem('yt_oauth_token');
+    try {
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet`, {
+        method: 'POST',
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json' 
+        },
+        body: JSON.stringify({
+          snippet: {
+            playlistId: playlistId,
+            resourceId: { kind: 'youtube#video', videoId: videoId }
+          }
+        })
+      });
+      if (res.ok) alert("Vidéo ajoutée avec succès !");
+    } catch (err) { console.error(err); }
+  };
+
   const handleToggleSubscribe = async (channelId: string) => {
-    const token = localStorage.getItem('yt_oauth_token')
-    if (!token) return
+    const token = localStorage.getItem('yt_oauth_token');
+    if (!token) return;
+
     try {
       if (isSubscribed) {
-        // Pour se désabonner, l'API demande l'ID d'abonnement (subscriptionId), simplifié ici pour l'exemple
-        setIsSubscribed(false)
+        // 1. Chercher l'ID de l'abonnement pour cette chaîne
+        const checkRes = await fetch(`https://www.googleapis.com/youtube/v3/subscriptions?part=id&forChannelId=${channelId}&mine=true`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await checkRes.json();
+        
+        if (data.items.length > 0) {
+          const subId = data.items[0].id;
+          // 2. Supprimer l'abonnement
+          await fetch(`https://www.googleapis.com/youtube/v3/subscriptions?id=${subId}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          setIsSubscribed(false);
+        }
       } else {
-        const res = await fetch(`https://www.googleapis.com/youtube/v3/subscriptions?part=snippet`, {
+        // 3. S'abonner
+        await fetch(`https://www.googleapis.com/youtube/v3/subscriptions?part=snippet`, {
           method: 'POST',
-          headers: { 
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            snippet: { resourceId: { kind: 'youtube#channel', channelId: channelId } }
-          })
-        })
-        if (res.ok) setIsSubscribed(true)
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ snippet: { resourceId: { kind: 'youtube#channel', channelId: channelId } } })
+        });
+        setIsSubscribed(true);
       }
-    } catch (err) {
-      console.error("Erreur d'abonnement:", err)
-    }
-  }
+    } catch (err) { console.error("Erreur:", err); }
+  };
 
   // SIMULATION TÉLÉCHARGEMENT COMPATIBLE CLIENT (Mock Blobs / LocalStorage)
   const handleDownloadVideo = (video: YouTubeVideo) => {
@@ -688,7 +716,11 @@ function SimulatorApp() {
             <button onClick={() => createPlaylist(prompt("Nom de la playlist :") || "Ma Playlist")} style={{ marginBottom: '10px', width: '100%', padding: '10px' }}>+ Créer une playlist</button>
             <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
               {playlists.map(p => (
-                <div key={p.id} style={{ padding: '10px', color: '#fff', borderBottom: '1px solid #333' }}>{p.snippet.title}</div>
+                <div key={p.id} 
+                    onClick={() => addVideoToPlaylist(p.id, currentVideo!.id)}
+                    style={{ padding: '10px', color: '#fff', borderBottom: '1px solid #333', cursor: 'pointer' }}>
+                  {p.snippet.title}
+                </div>
               ))}
             </div>
             <button onClick={() => setShowPlaylistModal(false)} style={{ marginTop: '10px', width: '100%' }}>Fermer</button>
