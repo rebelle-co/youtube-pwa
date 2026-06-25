@@ -178,40 +178,34 @@ export default function Home() {
       }
 
       const uploadsPlaylistId = 'UU' + channelId.substring(2)
-      let rawItems: any[] = []
-      let nextPageToken = ''
-      let hasNextPage = true
-      let pageCount = 0 
-      
-      while (hasNextPage && pageCount < 3) {
-        const pageParam = nextPageToken ? `&pageToken=${nextPageToken}` : ''
-        const res = await fetch(
-          `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50${pageParam}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        )
+        let rawItems: any[] = []
+        let nextPageToken = ''
+        let hasNextPage = true
 
-        if (res.status === 401) {
-          localStorage.removeItem('yt_oauth_token')
-          loginWithGoogle()
-          return
+        // On supprime la limite "pageCount < 3" pour tout récupérer
+        while (hasNextPage) {
+          const pageParam = nextPageToken ? `&pageToken=${nextPageToken}` : ''
+          const res = await fetch(
+            `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${uploadsPlaylistId}&maxResults=50${pageParam}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          )
+
+          if (res.status === 401) {
+            localStorage.removeItem('yt_oauth_token')
+            loginWithGoogle()
+            return
+          }
+
+          if (!res.ok) throw new Error('Erreur API YouTube Videos Playlist')
+          const data = await res.json()
+          rawItems = [...rawItems, ...data.items]
+
+          if (data.nextPageToken) {
+            nextPageToken = data.nextPageToken
+          } else {
+            hasNextPage = false
+          }
         }
-
-        if (!res.ok) throw new Error('Erreur API YouTube Videos Playlist')
-        const data = await res.json()
-        rawItems = [...rawItems, ...data.items]
-
-        if (data.nextPageToken) {
-          nextPageToken = data.nextPageToken
-          pageCount++
-        } else {
-          hasNextPage = false
-        }
-      }
-
-      if (rawItems.length === 0) {
-        setVideos([])
-        return
-      }
 
       const videoIds = rawItems.map((item: any) => item.snippet.resourceId.videoId)
       let detailedVideos: YouTubeVideo[] = []
