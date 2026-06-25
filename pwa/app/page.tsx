@@ -75,7 +75,7 @@ const parseISODuration = (isoDuration: string): string => {
 const formatViews = (views?: number): string => {
   if (!views) return '0 vue'
   if (views >= 1000000) return `${(views / 1000000).toFixed(1).replace('.', '.')} M de vues`
-  if (views >= 1000) return `${(views / 1000).toFixed(0)} k vues`
+  if (views >= 1000) return `${(views / 1000).toFixed(0)} k de vues`
   return `${views} vue${views > 1 ? 's' : ''}`
 }
 
