@@ -1,6 +1,7 @@
 'use client'
 
-import { useAppContext } from "./context/AppContext"
+import Navbar from "./components/Navbar"
+import { AppProvider, useAppContext } from "./context/AppContext"
 
 
 export default function HomePage() {
@@ -19,8 +20,8 @@ export default function HomePage() {
 
   return (
     <section>
-      <h2 className="tab-title">Accueil</h2>
-      <p>Bienvenue sur votre simulateur YouTube.</p>
+      <Navbar/>
+  
     </section>
   )
 }
