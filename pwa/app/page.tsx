@@ -625,7 +625,7 @@ function SimulatorApp() {
                   <button onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'popular' }))} style={{ background: currentFilter === 'popular' ? '#fff' : 'none', border: 'none', color: currentFilter === 'popular' ? '#111' : '#fff', fontWeight: currentFilter === 'popular' ? 'bold' : 'normal', cursor: 'pointer', padding: '10px', fontFamily: 'inherit', borderRadius:18 }}>
                     Populaires
                   </button>
-                  <button onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'old' }))} style={{ background: currentFilter === 'old' ? '#fff' : 'none', border: 'none', color: currentFilter === 'old' ? '#111' : '#fff', fontWeight: currentFilter === 'old' ? 'bold' : 'normal', cursor: 'pointer', padding: '5px 0', fontFamily: 'inherit', borderRadius:18 }}>
+                  <button onClick={() => setFilters(prev => ({ ...prev, [activeSubTab]: 'old' }))} style={{ background: currentFilter === 'old' ? '#fff' : 'none', border: 'none', color: currentFilter === 'old' ? '#111' : '#fff', fontWeight: currentFilter === 'old' ? 'bold' : 'normal', cursor: 'pointer', padding: '10px', fontFamily: 'inherit', borderRadius:18 }}>
                     Les plus anciennes
                   </button>
                 </div>
