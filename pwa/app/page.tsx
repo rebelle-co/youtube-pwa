@@ -146,7 +146,7 @@ export default function Home() {
     return (minutes * 60) + seconds <= 60
   }
 
-  // Récupération des vidéos : Focus uniquement sur les 20 dernières vidéos publiées
+  // Récupération optimisée des vidéos : 20 dernières YouTube vs Intégralité DB locale
   const fetchVideosForChannel = async (channelId: string, channelThumbnail?: string) => {
     setLoadingVideos(true)
     try {
@@ -156,7 +156,7 @@ export default function Home() {
         return
       }
 
-      // 1. ÉTAPE SYNC : Récupération stricte des 20 derniers IDs depuis YouTube (Pas de boucle infinie !)
+      // 1. ÉTAPE RECHERCHE YT : Récupération stricte des 20 dernières publications YouTube
       const uploadsPlaylistId = 'UU' + channelId.substring(2)
       console.log(`[YT Simulator] 🔄 Récupération des 20 dernières vidéos YouTube pour la chaîne ${channelId}...`);
 
@@ -174,22 +174,20 @@ export default function Home() {
       if (!res.ok) throw new Error('Erreur API YouTube Videos Playlist')
       const data = await res.json()
       
-      const recentVideoIds: string[] = data.items ? data.items.map((item: any) => item.snippet.resourceId.videoId) : []
+      const latestTwentyVideoIds: string[] = data.items 
+        ? data.items.map((item: any) => item.snippet.resourceId.videoId) 
+        : []
 
-      if (recentVideoIds.length === 0) {
-        setVideos([])
-        setLoadingVideos(false)
-        return
-      }
-
-      // 2. VÉRIFICATION DB : On regarde quelles vidéos parmi ces 20 sont DÉJÀ enregistrées
-      console.log(`[YT Simulator] 🔍 Vérification des vidéos existantes en DB (${recentVideoIds.length} IDs analysés)...`);
+      // 2. CHARGEMENT DE TOUTE LA DB : On extrait TOUTES les vidéos stockées pour cette chaîne
+      console.log(`[YT Simulator] 🔍 Récupération de l'intégralité des vidéos de la chaîne stockées en DB...`);
       const { data: cachedVideos, error: dbError } = await supabase
         .from('videos')
         .select('*')
-        .in('id', recentVideoIds)
+        .eq('channel_id', channelId)
 
-      // Règle 1 : On formate et on affiche DIRECTEMENT ce qui est déjà connu en DB
+      if (dbError) console.error("[YT Simulator] Erreur Supabase Fetch :", dbError)
+
+      // Formatage de l'ensemble du cache disponible
       const formattedCached: YouTubeVideo[] = cachedVideos ? cachedVideos.map((v: any) => ({
         id: v.id,
         title: v.title,
@@ -199,18 +197,19 @@ export default function Home() {
         type: (v.type || 'standard') as SubTabType
       })) : []
 
-      // Tri chronologique décroissant pour le premier rendu visuel
+      // Tri global par date décroissante pour l'affichage initial
       formattedCached.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
       
       setVideos(formattedCached)
-      setLoadingVideos(false) // UI débloquée instantanément !
+      setLoadingVideos(false) // Désactivation immédiate du loader global pour afficher le cache disponible
 
-      // 3. FILTRAGE ET INTEGRATION DES MANQUANTS
+      // 3. FILTRAGE ET RECHERCHE DES MANQUANTES (uniquement sur les 20 dernières récupérées)
       const cachedIdsSet = new Set(cachedVideos?.map(v => v.id) || [])
-      const missingVideoIds = recentVideoIds.filter(id => !cachedIdsSet.has(id))
+      const missingVideoIds = latestTwentyVideoIds.filter(id => !cachedIdsSet.has(id))
 
-      console.log(`[YT Simulator] 📊 Résultat : ${formattedCached.length} en cache, ${missingVideoIds.length} nouvelles vidéos à synchroniser.`);
+      console.log(`[YT Simulator] 📊 Résultat : ${formattedCached.length} vidéos chargées depuis la DB. ${missingVideoIds.length} vidéos manquantes identifiées sur les 20 dernières.`);
 
+      // S'il y a des nouveautés parmi les 20 derniers uploads, on synchronise
       if (missingVideoIds.length > 0) {
         console.log(`[YT Simulator] 📥 Fetching des détails pour les ${missingVideoIds.length} vidéos manquantes...`);
 
@@ -222,7 +221,7 @@ export default function Home() {
         if (detailsRes.ok) {
           const detailsData = await detailsRes.json()
 
-          // Classification des types (Shorts vs Standard) via ton API locale
+          // Classification via ton API locale
           const classificationRes = await fetch('/api/classify-videos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -245,6 +244,7 @@ export default function Home() {
               ? (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url || '')
               : (item.snippet.thumbnails?.medium?.url || item.snippet.thumbnails?.default?.url || '')
 
+            // Préparation pour l'écriture Supabase
             dbInserts.push({
               id: item.id,
               title: item.snippet.title,
@@ -258,6 +258,7 @@ export default function Home() {
               type: finalType
             })
 
+            // Préparation pour l'affichage immédiat
             formattedChunk.push({
               id: item.id,
               title: item.snippet.title,
@@ -268,20 +269,20 @@ export default function Home() {
             })
           })
 
-          // Sauvegarde invisible dans Supabase
+          // Écriture en arrière-plan dans Supabase
           if (dbInserts.length > 0) {
             const { error: upsertError } = await supabase.from('videos').upsert(dbInserts)
             if (upsertError) console.error("[YT Simulator] Erreur insertion Supabase :", upsertError)
           }
 
-          // Injection dynamique dans la liste existante et tri final propre
+          // Injection progressive des nouveautés et réalignement du tri chronologique complet
           setVideos((prevVideos) => {
             const newCombined = [...prevVideos, ...formattedChunk]
             return newCombined.sort((a, b) => new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime())
           })
         }
       }
-      console.log(`[YT Simulator] 🎉 Fin de la synchronisation ciblée.`);
+      console.log(`[YT Simulator] 🎉 Synchronisation ciblée terminée avec succès !`);
 
     } catch (err) {
       console.error("[YT Simulator] Erreur lors du traitement des vidéos :", err)
@@ -550,7 +551,7 @@ export default function Home() {
                   onClick={() => {
                     setActiveTab('subscriptions');
                     setSelectedChannel(sub);       
-                    fetchVideosForChannel(sub.id, sub.thumbnail); 
+                    fetchVideosForChannel(sub.id, sub.thumbnail);
                     setActiveSubTab('standard'); 
                   }}
                 >
