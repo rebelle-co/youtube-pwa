@@ -130,6 +130,10 @@
   border-radius:10px;
 }
 
+.video-card h4 {
+  margin:10px 0 auto;
+}
+
 .more-description {
   background: none;
   color: white;
