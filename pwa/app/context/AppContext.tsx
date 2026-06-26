@@ -123,6 +123,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return data.items?.[0]?.brandingSettings?.image?.bannerExternalUrl || null;
   };
 
+  // Dans AppProvider (AppContext.tsx)
+  const fetchChannelById = async (channelId: string) => {
+    const token = localStorage.getItem('yt_oauth_token');
+    if (!token) return;
+    
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const data = await res.json();
+    if (data.items && data.items.length > 0) {
+      const item = data.items[0];
+      setSelectedChannel({
+        id: item.id,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails.default.url
+      });
+    }
+  };
+
   // Fonction pour synchroniser le nombre de vidéos
   const syncChannelVideos = async (channelId: string, ytTotal: number) => {
     const { count } = await supabase
@@ -529,6 +549,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addVideoToPlaylist,
       handleToggleSubscribe,
       handleDownloadVideo,
+      fetchChannelById,
       fetchChannelPlaylists,
       loginWithGoogle,
       fetchChannelBanner,
