@@ -178,4 +178,7 @@
   color: #fff;
   background-color:#00000099;
   font-family: Roboto, "Arial", sans-serif;
+  padding: 5px;
+  border-radius: 10px;
+  font-size: 14px;
 }
