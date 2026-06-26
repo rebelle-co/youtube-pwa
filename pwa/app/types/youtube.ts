@@ -16,6 +16,13 @@ export interface YouTubeVideo {
   viewCount?: number      
 }
 
+export interface YouTubePlaylist {
+  id: string;
+  snippet: {
+    title: string;
+  };
+}
+
 export type TabType = 'accueil' | 'downloads' | 'subscriptions' | 'profile'
 export type SubTabType = 'standard' | 'shorts'
 export type FilterType = 'recent' | 'popular' | 'old'

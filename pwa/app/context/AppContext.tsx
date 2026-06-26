@@ -108,6 +108,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [showPlaylistModal, setShowPlaylistModal] = useState(false)
   const [rating, setRating] = useState<'like' | 'dislike' | 'none'>('none')
 
+  // Ajoutez ces états dans AppProvider
+  const [channelData, setChannelData] = useState<any>(null); // Pour stocker abonnés/bannière
+  const [channelPlaylists, setChannelPlaylists] = useState<any[]>([]);
+
+  // Fonction pour synchroniser le nombre de vidéos
+  const syncChannelVideos = async (channelId: string, ytTotal: number) => {
+    const { count } = await supabase
+      .from('videos')
+      .select('*', { count: 'exact', head: true })
+      .eq('channel_id', channelId);
+
+    if (count !== ytTotal) {
+      // Appel à fetchVideosForChannel existant qui gère l'upsert
+      await fetchVideosForChannel(channelId);
+    }
+  };
+
+  // Fonction pour récupérer Playlists de la chaîne spécifique
+  const fetchChannelPlaylists = async (channelId: string) => {
+    const token = localStorage.getItem('yt_oauth_token');
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&channelId=${channelId}&maxResults=50`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const data = await res.json();
+    setChannelPlaylists(data.items || []);
+  };
+
   const fetchYouTubeSubscriptions = async (token: string) => {
     setLoadingSubs(true)
     try {

@@ -3,12 +3,32 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { useAppContext } from '@/app/context/AppContext'
 import "@/app/styles/channel.css"
-import { YouTubeVideo } from '@/app/types/youtube'
+import { YouTubePlaylist, YouTubeVideo } from '@/app/types/youtube'
 
 export default function ChannelPage() {
-  const { selectedChannel, handleToggleSubscribe, isSubscribed, videos } = useAppContext()
   const [activeTab, setActiveTab] = useState('Accueil')
   const tabs = ['Accueil', 'Videos', 'Shorts', 'Playlists']
+
+  const { 
+    selectedChannel, videos, fetchVideosForChannel, 
+    fetchChannelPlaylists, channelPlaylists, handleToggleSubscribe, isSubscribed 
+  } = useAppContext();
+
+  useEffect(() => {
+    if (selectedChannel) {
+      // 1. Fetcher les vidéos (et synchroniser DB)
+      fetchVideosForChannel(selectedChannel.id);
+      // 2. Fetcher les playlists spécifiques à cette chaîne
+      fetchChannelPlaylists(selectedChannel.id);
+    }
+  }, [selectedChannel?.id]);
+
+  // Filtrage intelligent
+  const filteredVideos = videos.filter((v: YouTubeVideo) => { // Ajoutez le type ici
+    if (activeTab === 'Videos') return v.type === 'standard';
+    if (activeTab === 'Shorts') return v.type === 'shorts';
+    return true;
+  });
 
   if (!selectedChannel) return <div>Chargement de la chaîne...</div>
 
@@ -58,6 +78,23 @@ export default function ChannelPage() {
               <h4>{video.title}</h4>
             </div>
           ))}
+      </div>
+
+      <div className="channel-content">
+        {activeTab === 'Playlists' ? (
+          channelPlaylists.map((pl: YouTubePlaylist) => (
+            <div key={pl.id} className="playlist-card">
+              {pl.snippet.title}
+            </div>
+          ))
+        ) : (
+          filteredVideos.map((video: YouTubeVideo) => (
+            <div key={video.id} className="video-card">
+              <img src={video.thumbnail} alt={video.title} />
+              <h4>{video.title}</h4>
+            </div>
+          ))
+        )}
       </div>
     </div>
   )
