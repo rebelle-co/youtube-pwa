@@ -89,7 +89,7 @@ export default function ChannelPage() {
           <p>
             {selectedChannel?.username ? `${selectedChannel.username}` : ''}  
             <span>
-              • {selectedChannel?.subscriberCount ? ` ${formatNumber(selectedChannel.subscriberCount)} abonnés` : ' 0 abonné'} • 
+               • {selectedChannel?.subscriberCount ? ` ${formatNumber(selectedChannel.subscriberCount)} abonnés` : ' 0 abonné'} • 
               {selectedChannel?.videoCount ? ` ${selectedChannel.videoCount} vidéos` : ' 0 vidéo'}
             </span>
           </p>
