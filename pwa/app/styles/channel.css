@@ -87,7 +87,13 @@
 
 .channel-content {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns:repeat(3, 1fr);;
   gap: 20px;
   padding: 0 20px;
+}
+
+.video-card {
+  justify-content: center;
+  display: flex;
+  flex-direction: column;
 }
