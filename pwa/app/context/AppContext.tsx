@@ -171,14 +171,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
     const data = await res.json();
 
+    // ... dans fetchChannelById
     if (data.items?.length) {
       const item = data.items[0];
+      
+      // LOGIQUE DE RÉCUPÉRATION HD
+      // 1. Bannière : déjà bien gérée avec split('=')[0]
       const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl?.split('=')[0];
+
+      // 2. Avatar/Thumbnail : On privilégie 'high' ou 'medium' pour la meilleure résolution disponible
+      const avatarUrl = item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url;
 
       const channelData = {
         id: item.id,
         title: item.snippet.title,
-        thumbnail_url: item.snippet.thumbnails.high?.url,
+        thumbnail_url: avatarUrl, // Utilisez l'URL HD
         banner_url: bannerUrl || null,
         username: item.snippet.customUrl,
         description: item.snippet.description,
@@ -187,7 +194,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         updated_at: new Date().toISOString()
       };
 
-      // Enregistrer/Mettre à jour dans Supabase
       await supabase.from('channels').upsert(channelData);
 
       setSelectedChannel({
@@ -376,9 +382,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
             detailsData.items.forEach((item: any) => {
               const finalType = realTypes[item.id] || 'standard'
+              // Remplacez 'medium' par 'maxres' pour avoir la meilleure qualité possible
               const thumbnail = finalType === 'shorts' 
                 ? (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || '')
-                : (item.snippet.thumbnails?.medium?.url || '')
+                : (item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.medium?.url || '')
 
               dbInserts.push({
                 id: item.id,
