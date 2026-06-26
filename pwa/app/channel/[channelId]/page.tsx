@@ -19,7 +19,7 @@ export default function ChannelPage() {
     selectedChannel, videos, fetchVideosForChannel, 
     fetchChannelPlaylists, channelPlaylists, handleToggleSubscribe, 
     isSubscribed, fetchChannelBanner, setSelectedChannel, fetchChannelById,
-    formatNumber,setVideos, formatViews, getRelativeTime
+    formatNumber,setVideos, getRelativeTime, formatViews
   } = context;
 
   console.log("Context check:", { setSelectedChannel, fetchChannelBanner });
@@ -139,14 +139,8 @@ export default function ChannelPage() {
           // Affichage des Vidéos / Shorts (via filteredVideos)
           filteredVideos.map((video: YouTubeVideo) => (
             <div key={video.id} className="video-card">
-              <div className="thumbnail-container">
-                <img src={video.thumbnail} alt={video.title} />
-                {/* Optionnel : afficher la durée si présente */}
-                {video.duration && <span className="duration-tag">{video.duration}</span>}
-              </div>
-              
+              <img src={video.thumbnail} alt={video.title} />
               <h4>{video.title}</h4>
-              
               <div className="video-meta">
                 <span>{formatViews(video.viewCount)}</span>
                 <span>•</span>
