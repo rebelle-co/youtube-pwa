@@ -1,3 +1,5 @@
+import { Url } from "next/dist/shared/lib/router/router"
+
 // types/youtube.ts
 export interface YouTubeSubscription {
   id: string
@@ -7,6 +9,7 @@ export interface YouTubeSubscription {
   description: string
   subscriberCount: number
   videoCount: number
+  bannerImageUrl: string
 }
 
 export interface YouTubeVideo {

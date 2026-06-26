@@ -135,31 +135,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   // Dans AppProvider (AppContext.tsx)
+  // 1. Assurez-vous d'ajouter "brandingSettings" dans la requête API
   const fetchChannelById = async (channelId: string) => {
     const token = localStorage.getItem("yt_oauth_token");
     if (!token) return;
 
+    // AJOUTEZ "brandingSettings" dans la partie "part"
     const res = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}`,
+      `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,brandingSettings&id=${channelId}`,
       {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       }
     );
 
     const data = await res.json();
 
-    // Dans AppProvider.tsx
     if (data.items?.length) {
       const item = data.items[0];
-      console.log("Données API reçues :", item); // DEBUG : Vérifiez ce qui est affiché ici !
+      
+      // 2. Récupérez l'URL ici
+      const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl;
 
       setSelectedChannel({
         id: item.id,
         title: item.snippet.title,
-        thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default.url,
-        username: item.snippet.customUrl, // Si c'est undefined, c'est normal
+        thumbnail: item.snippet.thumbnails.high?.url,
+        // Stockez la bannière ici
+        bannerImageUrl: bannerUrl ? bannerUrl.split('=')[0] : null, 
+        username: item.snippet.customUrl,
         description: item.snippet.description,
         subscriberCount: item.statistics.subscriberCount,
         videoCount: item.statistics.videoCount,
