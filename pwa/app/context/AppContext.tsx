@@ -136,6 +136,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  
+
   // Fonction pour récupérer Playlists de la chaîne spécifique
   const fetchChannelPlaylists = async (channelId: string) => {
     const token = localStorage.getItem('yt_oauth_token');
@@ -541,13 +543,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 export const useAppContext = () => {
   const context = useContext(AppContext);
   if (!context) {
-    // Retourner un objet par défaut pour éviter le crash du build
     return {
       user: null,
       subscriptions: [],
-      // ... ajoutez les autres propriétés avec des valeurs par défaut vides
       loading: false,
+      // AJOUTEZ CES VALEURS PAR DÉFAUT POUR ÉVITER LE CRASH
+      fetchChannelBanner: () => Promise.resolve(null),
+      setSelectedChannel: () => {}, 
+      fetchVideosForChannel: () => {},
+      fetchChannelPlaylists: () => {},
+      handleToggleSubscribe: () => {},
+      isSubscribed: false,
+      selectedChannel: null,
+      videos: [],
+      channelPlaylists: []
     };
   }
   return context;
-}
+};
