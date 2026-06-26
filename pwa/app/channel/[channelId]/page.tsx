@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { useAppContext } from '@/app/context/AppContext'
 import "@/app/styles/channel.css"
@@ -51,11 +51,17 @@ export default function ChannelPage() {
   }, [channelId]);
 
   // Filtrage intelligent
-  const filteredVideos = videos.filter((v: YouTubeVideo) => { // Ajoutez le type ici
-    if (activeTab === 'Videos') return v.type === 'standard';
-    if (activeTab === 'Shorts') return v.type === 'shorts';
-    return true;
-  });
+  const filteredVideos = useMemo(() => {
+    return videos
+      .filter((v: YouTubeVideo) => {
+        if (activeTab === 'Videos') return v.type === 'standard';
+        if (activeTab === 'Shorts') return v.type === 'shorts';
+        return true;
+      })
+      .sort((a: YouTubeVideo, b: YouTubeVideo) => {
+        return new Date(b.rawPublishedAt).getTime() - new Date(a.rawPublishedAt).getTime();
+      });
+  }, [videos, activeTab]);
 
   console.log("URL de la bannière :", selectedChannel?.bannerImageUrl)
 
