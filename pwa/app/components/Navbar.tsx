@@ -62,14 +62,23 @@ export default function Navbar({ isOpen }: { isOpen: boolean }) {
             </button>
 
             {/* Cascade dynamique */}
-            {isOpen && openMenu === item.name && item.name === 'Abonnements' && (
+            {/* Cascade Abonnements */}
+            {isOpen && openMenu === 'Abonnements' && (
               <div className="navbar-cascade">
-                {subscriptions.map((sub: YouTubeSubscription) => (
-                  <div key={sub.id} className="nav-sub-item" onClick={() => handleChannelClick(sub)}>
-                    <img src={sub.thumbnail} alt={sub.title} className="nav-sub-avatar" />
-                    <span>{sub.title}</span>
-                  </div>
-                ))}
+                {subscriptions.length > 0 ? (
+                  subscriptions.map((sub: YouTubeSubscription) => (
+                    <div 
+                      key={sub.id} 
+                      className="nav-sub-item" 
+                      onClick={() => handleChannelClick(sub)}
+                    >
+                      <img src={sub.thumbnail} alt={sub.title} className="nav-sub-avatar" />
+                      <span className="nav-sub-title">{sub.title}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="nav-sub-item">Aucun abonnement</div>
+                )}
               </div>
             )}
           </div>
