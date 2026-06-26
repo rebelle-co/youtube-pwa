@@ -13,7 +13,7 @@ export default function ChannelPage() {
 
 
   const context = useAppContext();
-  console.log("DEBUG CONTEXT:", context); // <--- AJOUTEZ CECI
+
   
   const { 
     selectedChannel, videos, fetchVideosForChannel, 
@@ -22,6 +22,7 @@ export default function ChannelPage() {
   } = context;
 
   console.log("Context check:", { setSelectedChannel, fetchChannelBanner });
+  console.log("DEBUG CONTEXT:", context); // <--- AJOUTEZ CECI
 
   const params = useParams(); // Récupérer l'ID de l'URL
   const channelId = params?.channelId as string;
