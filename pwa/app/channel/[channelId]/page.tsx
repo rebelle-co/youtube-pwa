@@ -14,14 +14,16 @@ export default function ChannelPage() {
     fetchChannelPlaylists, channelPlaylists, handleToggleSubscribe, isSubscribed 
   } = useAppContext();
 
+  const params = useParams(); // Récupérer l'ID de l'URL
+  const channelId = params?.channelId as string;
+
   useEffect(() => {
-    if (selectedChannel) {
-      // 1. Fetcher les vidéos (et synchroniser DB)
-      fetchVideosForChannel(selectedChannel.id);
-      // 2. Fetcher les playlists spécifiques à cette chaîne
-      fetchChannelPlaylists(selectedChannel.id);
+    // Si on n'a pas de canal sélectionné, on le récupère via API
+    if (!selectedChannel && channelId) {
+        // Appelez ici une fonction pour récupérer les détails du canal
+        // fetchChannelDetails(channelId).then(data => setSelectedChannel(data));
     }
-  }, [selectedChannel?.id]);
+  }, [channelId]);
 
   // Filtrage intelligent
   const filteredVideos = videos.filter((v: YouTubeVideo) => { // Ajoutez le type ici
