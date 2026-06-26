@@ -55,6 +55,20 @@
   text-overflow: ellipsis;
   color: #fff;
   margin: 0;
+  font-size: 1rem;
+}
+
+.channel-info {
+  font-family: Roboto, "Arial", sans-serif;
+}
+
+.channel-info p {
+  font-size:0.9rem;
+  opacity: .8;
+}
+
+.channel-info h1 {
+  font-weight:600;
 }
 
 .subscribe-btn {
