@@ -237,7 +237,7 @@
     flex-direction: column;
     justify-content: flex-start;
     padding-top: 56px;
-    gap: 20px;
+    gap: 5px;
     border-top: none;
     border-right: 1px solid #212121;
   }
