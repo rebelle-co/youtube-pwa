@@ -11,10 +11,15 @@ export default function ChannelPage() {
 
   
 
+
+  const context = useAppContext();
+  console.log("DEBUG CONTEXT:", context); // <--- AJOUTEZ CECI
+  
   const { 
     selectedChannel, videos, fetchVideosForChannel, 
-    fetchChannelPlaylists, channelPlaylists, handleToggleSubscribe, isSubscribed, fetchChannelBanner,setSelectedChannel 
-  } = useAppContext();
+    fetchChannelPlaylists, channelPlaylists, handleToggleSubscribe, 
+    isSubscribed, fetchChannelBanner, setSelectedChannel 
+  } = context;
 
   console.log("Context check:", { setSelectedChannel, fetchChannelBanner });
 
