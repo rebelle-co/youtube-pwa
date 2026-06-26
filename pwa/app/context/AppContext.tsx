@@ -138,34 +138,67 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // 1. Assurez-vous d'ajouter "brandingSettings" dans la requête API
   const fetchChannelById = async (channelId: string) => {
     const token = localStorage.getItem("yt_oauth_token");
-    if (!token) return;
+    
+    // 1. Essayer de récupérer depuis Supabase en premier
+    const { data: cached, error } = await supabase
+      .from('channels')
+      .select('*')
+      .eq('id', channelId)
+      .single();
 
-    // AJOUTEZ "brandingSettings" dans la partie "part"
+    // 2. Vérifier si on a une donnée fraîche (moins de 24h)
+    const isFresh = cached && (new Date().getTime() - new Date(cached.updated_at).getTime() < 86400000);
+
+    if (isFresh) {
+      setSelectedChannel({
+        id: cached.id,
+        title: cached.title,
+        thumbnail: cached.thumbnail_url,
+        bannerImageUrl: cached.banner_url,
+        username: cached.username,
+        description: cached.description,
+        subscriberCount: cached.subscriber_count,
+        videoCount: cached.video_count,
+      });
+      return;
+    }
+
+    // 3. Sinon, fetch YouTube et Upsert
+    if (!token) return;
     const res = await fetch(
       `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,brandingSettings&id=${channelId}`,
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
+      { headers: { Authorization: `Bearer ${token}` } }
     );
-
     const data = await res.json();
 
     if (data.items?.length) {
       const item = data.items[0];
-      
-      // 2. Récupérez l'URL ici
-      const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl;
+      const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl?.split('=')[0];
 
-      setSelectedChannel({
+      const channelData = {
         id: item.id,
         title: item.snippet.title,
-        thumbnail: item.snippet.thumbnails.high?.url,
-        // Stockez la bannière ici
-        bannerImageUrl: bannerUrl ? bannerUrl.split('=')[0] : null, 
+        thumbnail_url: item.snippet.thumbnails.high?.url,
+        banner_url: bannerUrl || null,
         username: item.snippet.customUrl,
         description: item.snippet.description,
-        subscriberCount: item.statistics.subscriberCount,
-        videoCount: item.statistics.videoCount,
+        subscriber_count: parseInt(item.statistics.subscriberCount),
+        video_count: parseInt(item.statistics.videoCount),
+        updated_at: new Date().toISOString()
+      };
+
+      // Enregistrer/Mettre à jour dans Supabase
+      await supabase.from('channels').upsert(channelData);
+
+      setSelectedChannel({
+        id: channelData.id,
+        title: channelData.title,
+        thumbnail: channelData.thumbnail_url,
+        bannerImageUrl: channelData.banner_url,
+        username: channelData.username,
+        description: channelData.description,
+        subscriberCount: channelData.subscriber_count,
+        videoCount: channelData.video_count,
       });
     }
   };
