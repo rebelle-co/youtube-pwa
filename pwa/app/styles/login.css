@@ -148,16 +148,6 @@
   50% { opacity: 1; }
 }
 
-/* Layout Principal après connexion */
-.app-container {
-  min-height: 100vh;
-  background-color: #0f0f0f;
-  color: #ffffff;
-  display: flex;
-  flex-direction: column;
-  padding-bottom: 70px; /* Espace pour pas que la navbar cache le contenu sur mobile */
-  padding-left: 240px;
-}
 
 /* Zone du contenu de l'onglet actif */
 .tab-content {
@@ -224,10 +214,6 @@
 
 /* Ajustements pour les écrans PC (Desktop) */
 @media (min-width: 768px) {
-  .app-container {
-    padding-bottom: 0;
-    padding-left: 240px; /* Laisse de la place pour la barre latérale */
-  }
   
   .navbar {
     top: 0;

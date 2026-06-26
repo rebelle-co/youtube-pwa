@@ -113,6 +113,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [channelData, setChannelData] = useState<any>(null); // Pour stocker abonnés/bannière
   const [channelPlaylists, setChannelPlaylists] = useState<any[]>([]);
 
+  // Dans AppContext.tsx
   const fetchChannelBanner = async (channelId: string) => {
     const token = localStorage.getItem('yt_oauth_token');
     const res = await fetch(
@@ -121,17 +122,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     );
     const data = await res.json();
     
-    const bannerUrl = data.items?.[0]?.brandingSettings?.image?.bannerExternalUrl;
-    
-    if (!bannerUrl) return null;
-
-    // Astuce : YouTube permet de modifier la taille via des paramètres d'URL
-    // Pour obtenir la version la plus large possible (souvent le cas par défaut),
-    // assurez-vous de ne pas limiter via des paramètres type "=wXXX-hXXX"
-    // Si l'URL contient "=w...-h...", vous pouvez supprimer cette partie 
-    // pour récupérer l'image originale non redimensionnée.
-    
-    return bannerUrl.split('=')[0]; 
+    // Retournez l'URL complète sans le split('=')[0] pour le moment
+    return data.items?.[0]?.brandingSettings?.image?.bannerExternalUrl || null;
   };
 
   // Dans AppProvider (AppContext.tsx)

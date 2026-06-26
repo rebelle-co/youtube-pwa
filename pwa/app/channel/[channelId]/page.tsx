@@ -65,7 +65,7 @@ export default function ChannelPage() {
   return (
     <div className="channel-page">
       {/* Bannière */}
-      <div className="channel-banner-container" style={{ width: '100%', height: '200px', overflow: 'hidden' }}>
+      <div className="channel-banner-container" style={{ width: '100%', height: '185px', overflow: 'hidden' }}>
         {selectedChannel?.bannerImageUrl && (
           <img 
             src={selectedChannel.bannerImageUrl.split('=')[0]} 

@@ -1,5 +1,19 @@
 .channel-page { padding-bottom: 20px; }
 
+.channel-banner-container {
+  width: 100%;
+  height: 250px; /* Augmentez légèrement la hauteur pour plus de détails */
+  overflow: hidden;
+  position: relative;
+}
+.channel-banner-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 20%; /* Ajuste la zone verticale affichée */
+  image-rendering: -webkit-optimize-contrast; /* Améliore le rendu sur certains navigateurs */
+}
+
 .channel-banner {
   width: 100%;
   height: 160px;
@@ -14,7 +28,7 @@
   display: flex;
   align-items: flex-start;
   gap: 20px;
-  padding: 0 20px;
+  padding: 30px 20px 0;
 }
 
 .channel-avatar {

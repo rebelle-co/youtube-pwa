@@ -43,13 +43,31 @@
 .app-container { display: flex; margin-top: 56px; }
 .nav-closed .navbar { display: none; }
 .nav-open .navbar { width: 240px; }
-.main-content { flex: 1; padding: 20px; width: "auto"; }
+.main-content {
+  flex: 1;
+  padding: 20px;
+  /* Utilise 100% de la largeur disponible moins le padding du parent */
+  /* On utilise 100vw (largeur vue) moins le padding de la nav */
+  width: calc(100vw - 72px); 
+  transition: width 0.3s ease;
+  box-sizing: border-box; /* Crucial pour que le padding ne casse pas la largeur */
+}
+
+.app-container.nav-open .main-content {
+  width: calc(100vw - 240px);
+}
 
 
 /* Configuration du conteneur parent */
 .app-container {
   display: flex;
   transition: all 0.3s ease;
+  min-height: 100dvh;
+  background-color: #0f0f0f;
+  color: #ffffff;
+  flex-direction: column;
+  width:100%;
+  overflow: hidden;
 }
 
 .app-container.nav-open {
