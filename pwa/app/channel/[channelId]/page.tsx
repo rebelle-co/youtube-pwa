@@ -45,7 +45,7 @@ export default function ChannelPage() {
     return true;
   });
 
-  if (!channelId) return <div>Chargement de la chaîne...</div>
+  if (!selectedChannel) return <div>Chargement de la chaîne...</div>
 
   return (
     <div className="channel-page">
