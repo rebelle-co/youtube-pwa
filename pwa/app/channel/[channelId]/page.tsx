@@ -1,32 +1,64 @@
-// app/channel/[channelId]/page.tsx
 'use client'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import { useAppContext } from '@/app/context/AppContext'
-import { useParams } from 'next/navigation' // useParams est mieux pour [channelId]
+import "./../styles/channel.css"
+import { YouTubeVideo } from '@/app/types/youtube'
 
 export default function ChannelPage() {
-  const params = useParams()
-  const channelId = params.channelId as string
-  const { fetchVideosForChannel, selectedChannel } = useAppContext()
+  const { selectedChannel, handleToggleSubscribe, isSubscribed, videos } = useAppContext()
+  const [activeTab, setActiveTab] = useState('Accueil')
+  const tabs = ['Accueil', 'Videos', 'Shorts', 'Playlists']
 
-  useEffect(() => {
-    if (channelId) {
-      // On déclenche le chargement des vidéos
-      fetchVideosForChannel(channelId)
-    }
-  }, [channelId])
+  if (!selectedChannel) return <div>Chargement de la chaîne...</div>
 
   return (
-    // On utilise la classe .tab-content définie dans votre CSS
-    <main className="tab-content">
-      <h1 className="tab-title">
-        {selectedChannel?.title || "Chargement de la chaîne..."}
-      </h1>
-      
-      {/* Ici viendra le contenu de votre grille de vidéos */}
-      <div className="video-grid">
-         {/* Votre mapping de vidéos ici */}
+    <div className="channel-page">
+      {/* Bannière */}
+      <div className="channel-banner"></div>
+
+      <div className="channel-header">
+        <img src={selectedChannel.thumbnail} alt={selectedChannel.title} className="channel-avatar" />
+        <div className="channel-info">
+          <h1>{selectedChannel.title}</h1>
+          <p>@username • X abonnés • Y vidéos</p>
+          <div className="channel-desc">
+            Description courte de la chaîne ici... plus
+          </div>
+          <button 
+            className={`subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}
+            onClick={() => handleToggleSubscribe(selectedChannel.id)}
+          >
+            {isSubscribed ? 'Abonné' : 'S\'abonner'}
+          </button>
+        </div>
       </div>
-    </main>
+
+      {/* Onglets */}
+      <div className="channel-tabs">
+        {tabs.map(tab => (
+          <button 
+            key={tab} 
+            className={activeTab === tab ? 'active' : ''}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Contenu (Grille de vidéos) */}
+      <div className="channel-content">
+        {videos
+          .filter((v: YouTubeVideo) => activeTab === 'Videos' ? v.type === 'standard' : true)
+          // Ajout du type ici : (video: YouTubeVideo)
+          .map((video: YouTubeVideo) => (
+            <div key={video.id} className="video-card">
+              <img src={video.thumbnail} alt={video.title} />
+              <h4>{video.title}</h4>
+            </div>
+          ))}
+      </div>
+    </div>
   )
 }

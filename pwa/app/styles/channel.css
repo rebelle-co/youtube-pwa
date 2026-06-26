@@ -1,0 +1,73 @@
+.channel-page { padding-bottom: 20px; }
+
+.channel-banner {
+  height: 200px;
+  background: #333; /* Remplacer par l'image de bannière API */
+  width: 100%;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.channel-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 0 20px;
+}
+
+.channel-avatar {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+}
+
+.channel-desc {
+  max-width: 600px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #aaa;
+  cursor: pointer;
+}
+
+.subscribe-btn {
+  padding: 10px 20px;
+  border-radius: 20px;
+  border: none;
+  background: white;
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.subscribe-btn.subscribed {
+  background: #272727;
+  color: white;
+}
+
+.channel-tabs {
+  display: flex;
+  gap: 30px;
+  border-bottom: 1px solid #333;
+  margin: 30px 20px;
+}
+
+.channel-tabs button {
+  background: none;
+  border: none;
+  color: #aaa;
+  padding-bottom: 10px;
+  cursor: pointer;
+}
+
+.channel-tabs button.active {
+  color: white;
+  border-bottom: 2px solid white;
+}
+
+.channel-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 0 20px;
+}
