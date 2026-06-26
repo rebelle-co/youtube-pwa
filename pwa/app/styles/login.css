@@ -237,7 +237,7 @@
     flex-direction: column;
     justify-content: flex-start;
     padding-top: 56px;
-    gap: 10px;
+    gap: 20px;
     border-top: none;
     border-right: 1px solid #212121;
   }
@@ -246,7 +246,7 @@
     flex-direction: row;
     justify-content: flex-start;
     padding: 0 24px;
-    gap: 16px;
+    gap: 5px;
     font-size: 14px;
     max-height: 48px;
     width: 100%;
