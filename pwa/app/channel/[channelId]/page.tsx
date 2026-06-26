@@ -139,8 +139,10 @@ export default function ChannelPage() {
           // Affichage des Vidéos / Shorts (via filteredVideos)
           filteredVideos.map((video: YouTubeVideo) => (
             <div key={video.id} className="video-card">
-              <img src={video.thumbnail} alt={video.title} />
-              {video.duration && <span className="duration-tag">{video.duration}</span>}
+              <div style={{position:"relative"}}>
+                <img src={video.thumbnail} alt={video.title} />
+                {video.duration && <span className="duration-tag">{video.duration}</span>}
+              </div>
               <div style={{gap:0}}>
                 <h4>{video.title}</h4>
                 <div className="video-meta">
