@@ -138,14 +138,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const fetchChannelById = async (channelId: string) => {
     const token = localStorage.getItem("yt_oauth_token");
     
-    // 1. Essayer de récupérer depuis Supabase en premier
+    // 1. Requête Supabase optimisée avec maybeSingle()
     const { data: cached, error } = await supabase
       .from('channels')
       .select('*')
       .eq('id', channelId)
-      .single();
+      .maybeSingle();
 
-    // 2. Vérifier si on a une donnée fraîche (moins de 24h)
+    // 2. Vérification simplifiée : si on a une donnée et qu'elle a moins de 24h
     const isFresh = cached && (new Date().getTime() - new Date(cached.updated_at).getTime() < 86400000);
 
     if (isFresh) {
@@ -159,34 +159,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
         subscriberCount: cached.subscriber_count,
         videoCount: cached.video_count,
       });
-      return;
+      return; // On arrête là, pas besoin d'appeler l'API YouTube
     }
 
     // 3. Sinon, fetch YouTube et Upsert
     if (!token) return;
+    
     const res = await fetch(
       `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,brandingSettings&id=${channelId}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
+    
+    if (!res.ok) return; // Sécurité en cas d'erreur API YouTube
     const data = await res.json();
 
-    // ... dans fetchChannelById
     if (data.items?.length) {
       const item = data.items[0];
       
-      // LOGIQUE DE RÉCUPÉRATION HD
-      // 1. Bannière : déjà bien gérée avec split('=')[0]
+      // ... (votre logique de traitement des données reste inchangée)
       const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl?.split('=')[0];
-
-      // 2. Avatar/Thumbnail : On privilégie 'high' ou 'medium' pour la meilleure résolution disponible
       const avatarUrl = (item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url)
-        ?.replace('default.jpg', 's800-c-k-c0x00ffffff-no-rj') // Force une taille de 800px nette
+        ?.replace('default.jpg', 's800-c-k-c0x00ffffff-no-rj')
         ?.replace('hqdefault.jpg', 's800-c-k-c0x00ffffff-no-rj');
 
       const channelData = {
         id: item.id,
         title: item.snippet.title,
-        thumbnail_url: avatarUrl, // Utilisez l'URL HD
+        thumbnail_url: avatarUrl,
         banner_url: bannerUrl || null,
         username: item.snippet.customUrl,
         description: item.snippet.description,

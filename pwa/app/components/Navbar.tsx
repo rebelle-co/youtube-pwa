@@ -27,9 +27,7 @@ export default function Navbar({ isOpen }: { isOpen: boolean }) {
   };
 
   const handleChannelClick = (sub: YouTubeSubscription) => {
-    setSelectedChannel(sub)
-    fetchVideosForChannel(sub.id, sub.thumbnail)
-    setActiveSubTab('standard')
+    // Juste naviguer, ne pas manipuler le contexte ici
     router.push(`/channel/${sub.id}`)
   }
 

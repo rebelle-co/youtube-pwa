@@ -19,7 +19,7 @@ export default function ChannelPage() {
     selectedChannel, videos, fetchVideosForChannel, 
     fetchChannelPlaylists, channelPlaylists, handleToggleSubscribe, 
     isSubscribed, fetchChannelBanner, setSelectedChannel, fetchChannelById,
-    formatNumber
+    formatNumber,setVideos
   } = context;
 
   console.log("Context check:", { setSelectedChannel, fetchChannelBanner });
@@ -29,30 +29,27 @@ export default function ChannelPage() {
   const channelId = params?.channelId as string;
 
   useEffect(() => {
+    let isMounted = true; // Sécurité pour éviter les fuites mémoire
+
     const loadChannelData = async () => {
-      setSelectedChannel(null); 
-      // Si on n'a pas de canal sélectionné dans le contexte (après refresh)
-      if (!selectedChannel && channelId) {
+      // Nettoyage immédiat
+      setSelectedChannel(null);
+      setVideos([]);
+
+      if (channelId) {
         await fetchChannelById(channelId);
-      }
-      
-      // Une fois qu'on a le canal (soit par le contexte, soit récupéré ci-dessus)
-      if (selectedChannel?.id || channelId) {
-        const idToUse = selectedChannel?.id || channelId;
-        fetchVideosForChannel(idToUse);
-        fetchChannelPlaylists(idToUse);
         
-        if (typeof fetchChannelBanner === 'function') {
-          fetchChannelBanner(idToUse).then((url: string | null) => {
-            // Mise à jour sécurisée
-            setSelectedChannel((prev: any) => ({ ...prev, bannerImageUrl: url }));
-          });
+        // On recharge les vidéos/playlists seulement si le composant est toujours monté
+        if (isMounted) {
+          fetchVideosForChannel(channelId);
+          fetchChannelPlaylists(channelId);
         }
       }
     };
 
     loadChannelData();
-  }, [channelId]); // On ne dépend que de l'ID dans l'URL
+    return () => { isMounted = false; };
+  }, [channelId]);
 
   // Filtrage intelligent
   const filteredVideos = videos.filter((v: YouTubeVideo) => { // Ajoutez le type ici
