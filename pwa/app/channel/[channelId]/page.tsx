@@ -73,7 +73,8 @@ export default function ChannelPage() {
               width: '100%', 
               height: '100%', 
               objectFit: 'cover',      // Recadre l'image pour remplir sans déformer
-              objectPosition: 'center' // Centre l'image
+              objectPosition: 'center', // Centre l'image
+              borderRadius: 18,
             }}
           />
         ) : (
