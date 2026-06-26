@@ -529,6 +529,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addVideoToPlaylist,
       handleToggleSubscribe,
       handleDownloadVideo,
+      fetchChannelPlaylists,
       loginWithGoogle,
       fetchChannelBanner,
       handleLogout,
