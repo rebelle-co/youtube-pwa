@@ -120,11 +120,13 @@
   flex-direction: column;
   max-width: 350px;
   margin: 0 auto;
+  width: 100%;
 }
 
 .video-card img {
   max-width: 350px;
   max-height: 200px;
+  border-radius:10px;
 }
 
 .more-description {
