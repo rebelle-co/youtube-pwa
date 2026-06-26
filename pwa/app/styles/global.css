@@ -52,6 +52,14 @@
   transition: all 0.3s ease;
 }
 
+.app-container.nav-open {
+  padding-left: 240px;
+}
+
+.app-container.nav-closed {
+  padding-left: 72px;
+}
+
 /* État Mini */
 .navbar.mini {
   width: 72px; /* Largeur réduite */

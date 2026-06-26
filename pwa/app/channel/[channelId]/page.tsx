@@ -76,7 +76,7 @@ export default function ChannelPage() {
         <img src={selectedChannel.thumbnail} alt={selectedChannel.title} className="channel-avatar" />
         <div className="channel-info">
           <h1>{selectedChannel.title}</h1>
-          <p>@username • X abonnés • Y vidéos</p>
+          <p>@username • {selectedChannel.subscriberCount} abonnés • {selectedChannel.videoCount} vidéos</p>
           <div className="channel-desc">
             Description courte de la chaîne ici... plus
           </div>

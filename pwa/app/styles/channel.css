@@ -1,11 +1,11 @@
 .channel-page { padding-bottom: 20px; }
 
 .channel-banner {
-  height: 200px;
-  background: #333; /* Remplacer par l'image de bannière API */
   width: 100%;
-  border-radius: 12px;
-  margin-bottom: 20px;
+  height: 200px; /* Ajustez selon vos besoins */
+  background-size: cover;          /* L'image remplit tout l'espace */
+  background-position: center;     /* Centrée */
+  background-repeat: no-repeat;    /* Empêche le dédoublement */
 }
 
 .channel-header {

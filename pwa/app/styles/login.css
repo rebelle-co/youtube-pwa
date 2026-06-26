@@ -329,7 +329,7 @@
     border-top: none;
     background-color: #0f0f0f;
     box-shadow: none;
-    padding-left: 16px; /* Décale les chaînes vers la droite pour faire un effet d'arborescence */
+    padding:0 16px; /* Décale les chaînes vers la droite pour faire un effet d'arborescence */
     box-sizing: border-box;
     scrollbar-width: none;
   }

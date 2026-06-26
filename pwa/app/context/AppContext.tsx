@@ -107,6 +107,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [playlists, setPlaylists] = useState<any[]>([])
   const [showPlaylistModal, setShowPlaylistModal] = useState(false)
   const [rating, setRating] = useState<'like' | 'dislike' | 'none'>('none')
+  
 
   // Ajoutez ces états dans AppProvider
   const [channelData, setChannelData] = useState<any>(null); // Pour stocker abonnés/bannière
@@ -125,20 +126,35 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Dans AppProvider (AppContext.tsx)
   const fetchChannelById = async (channelId: string) => {
-    const token = localStorage.getItem('yt_oauth_token');
+    const token = localStorage.getItem("yt_oauth_token");
     if (!token) return;
-    
+
     const res = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}`,
-      { headers: { Authorization: `Bearer ${token}` } }
+      `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
     );
+
     const data = await res.json();
-    if (data.items && data.items.length > 0) {
+
+    if (data.items?.length) {
       const item = data.items[0];
+
       setSelectedChannel({
         id: item.id,
         title: item.snippet.title,
-        thumbnail: item.snippet.thumbnails.default.url
+        thumbnail: item.snippet.thumbnails.default.url,
+
+        username: item.snippet.customUrl,
+
+        description: item.snippet.description,
+
+        subscriberCount: item.statistics.subscriberCount,
+
+        videoCount: item.statistics.videoCount,
       });
     }
   };

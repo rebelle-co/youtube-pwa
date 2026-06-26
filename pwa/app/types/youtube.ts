@@ -3,6 +3,10 @@ export interface YouTubeSubscription {
   id: string
   title: string
   thumbnail: string
+  username: string
+  description: string
+  subscriberCount: number
+  videoCount: number
 }
 
 export interface YouTubeVideo {
