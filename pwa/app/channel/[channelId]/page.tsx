@@ -18,7 +18,8 @@ export default function ChannelPage() {
   const { 
     selectedChannel, videos, fetchVideosForChannel, 
     fetchChannelPlaylists, channelPlaylists, handleToggleSubscribe, 
-    isSubscribed, fetchChannelBanner, setSelectedChannel, fetchChannelById
+    isSubscribed, fetchChannelBanner, setSelectedChannel, fetchChannelById,
+    formatNumber
   } = context;
 
   console.log("Context check:", { setSelectedChannel, fetchChannelBanner });
@@ -76,7 +77,11 @@ export default function ChannelPage() {
         <img src={selectedChannel.thumbnail} alt={selectedChannel.title} className="channel-avatar" />
         <div className="channel-info">
           <h1>{selectedChannel.title}</h1>
-          <p>@username • {selectedChannel.subscriberCount} abonnés • {selectedChannel.videoCount} vidéos</p>
+          <p>
+            {selectedChannel?.username ? `@${selectedChannel.username}` : ''} • 
+            {selectedChannel?.subscriberCount ? ` ${formatNumber(selectedChannel.subscriberCount)} abonnés` : ' 0 abonné'} • 
+            {selectedChannel?.videoCount ? ` ${selectedChannel.videoCount} vidéos` : ' 0 vidéo'}
+          </p>
           <div className="channel-desc">
             Description courte de la chaîne ici... plus
           </div>

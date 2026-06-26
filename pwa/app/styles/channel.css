@@ -2,7 +2,9 @@
 
 .channel-banner {
   width: 100%;
-  height: 200px; /* Ajustez selon vos besoins */
+  height: 160px;
+  border-radius: 10px;
+  margin-bottom: 20px;
   background-size: cover;          /* L'image remplit tout l'espace */
   background-position: center;     /* Centrée */
   background-repeat: no-repeat;    /* Empêche le dédoublement */
@@ -28,6 +30,7 @@
   text-overflow: ellipsis;
   color: #aaa;
   cursor: pointer;
+  margin: 1rem 0;
 }
 
 .subscribe-btn {

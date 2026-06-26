@@ -140,23 +140,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const data = await res.json();
 
+    // Dans AppProvider.tsx
     if (data.items?.length) {
       const item = data.items[0];
+      console.log("Données API reçues :", item); // DEBUG : Vérifiez ce qui est affiché ici !
 
       setSelectedChannel({
         id: item.id,
         title: item.snippet.title,
-        thumbnail: item.snippet.thumbnails.default.url,
-
-        username: item.snippet.customUrl,
-
+        thumbnail: item.snippet.thumbnails.high?.url || item.snippet.thumbnails.default.url,
+        username: item.snippet.customUrl, // Si c'est undefined, c'est normal
         description: item.snippet.description,
-
         subscriberCount: item.statistics.subscriberCount,
-
         videoCount: item.statistics.videoCount,
       });
     }
+  };
+
+  const formatNumber = (num: string | number) => {
+    const n = parseInt(num as string, 10);
+    if (isNaN(n)) return "0";
+    if (n >= 1000000) return (n / 1000000).toFixed(1) + " M";
+    if (n >= 1000) return (n / 1000).toFixed(1) + " k";
+    return n.toString();
   };
 
   // Fonction pour synchroniser le nombre de vidéos
@@ -571,6 +577,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       fetchChannelBanner,
       handleLogout,
       formatViews,
+      formatNumber,
       getRelativeTime
     }}>
       {children}
