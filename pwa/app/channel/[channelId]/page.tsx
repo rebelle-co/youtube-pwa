@@ -74,15 +74,16 @@ export default function ChannelPage() {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Si on est à 100px du bas de la page
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+      // Si on est à 200px du bas de la fenêtre
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+        // On s'assure de ne pas dépasser la limite
         setVisibleCount(prev => prev + 20);
       }
     };
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [filteredVideos]); // On écoute filteredVideos pour savoir s'il reste des éléments
+  }, []); // Pas besoin de dépendance ici car on utilise le setVisibleCount fonctionnel
 
   if (!selectedChannel) return <div>Chargement de la chaîne...</div>
 
@@ -179,6 +180,12 @@ export default function ChannelPage() {
             </div>
           ))
         )}
+
+      {visibleCount < filteredVideos.length && (
+        <div className="loading-spinner" style={{ textAlign: 'center', padding: '20px' }}>
+          <div className="spinner">Chargement...</div>
+        </div>
+      )}
         
       </div>
     </div>
