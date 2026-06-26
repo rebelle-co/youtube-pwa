@@ -60,6 +60,8 @@ export default function ChannelPage() {
     return true;
   });
 
+  console.log("URL de la bannière :", selectedChannel?.bannerImageUrl)
+
   if (!selectedChannel) return <div>Chargement de la chaîne...</div>
 
   return (

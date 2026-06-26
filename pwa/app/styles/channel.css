@@ -1,17 +1,20 @@
 .channel-page { padding-bottom: 20px; }
 
+/* Dans channel.css */
 .channel-banner-container {
   width: 100%;
-  height: 250px; /* Augmentez légèrement la hauteur pour plus de détails */
+  height: 250px; /* Un peu plus haut pour plus de détails */
   overflow: hidden;
   position: relative;
 }
+
 .channel-banner-container img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 20%; /* Ajuste la zone verticale affichée */
-  image-rendering: -webkit-optimize-contrast; /* Améliore le rendu sur certains navigateurs */
+  object-fit: cover; /* Recadre intelligemment */
+  object-position: center; 
+  /* Force le rendu haute qualité sur les navigateurs webkit */
+  image-rendering: -webkit-optimize-contrast; 
 }
 
 .channel-banner {

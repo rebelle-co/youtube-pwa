@@ -113,17 +113,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [channelData, setChannelData] = useState<any>(null); // Pour stocker abonnés/bannière
   const [channelPlaylists, setChannelPlaylists] = useState<any[]>([]);
 
+
   // Dans AppContext.tsx
   const fetchChannelBanner = async (channelId: string) => {
     const token = localStorage.getItem('yt_oauth_token');
+    // Il faut bien demander 'brandingSettings'
     const res = await fetch(
       `https://www.googleapis.com/youtube/v3/channels?part=brandingSettings&id=${channelId}`,
       { headers: { Authorization: `Bearer ${token}` } }
     );
     const data = await res.json();
     
-    // Retournez l'URL complète sans le split('=')[0] pour le moment
-    return data.items?.[0]?.brandingSettings?.image?.bannerExternalUrl || null;
+    const bannerUrl = data.items?.[0]?.brandingSettings?.image?.bannerExternalUrl;
+    
+    if (!bannerUrl) return null;
+
+    // En enlevant les paramètres après le '=', vous récupérez l'image source originale.
+    return bannerUrl.split('=')[0]; 
   };
 
   // Dans AppProvider (AppContext.tsx)
