@@ -115,7 +115,6 @@
 }
 
 .video-card {
-  justify-content: space-between;
   display: flex;
   flex-direction: column;
   max-width: 350px;

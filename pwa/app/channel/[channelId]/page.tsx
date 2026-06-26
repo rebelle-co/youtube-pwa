@@ -143,7 +143,7 @@ export default function ChannelPage() {
                 <img src={video.thumbnail} alt={video.title} />
                 {video.duration && <span className="duration-tag">{video.duration}</span>}
               </div>
-              <div style={{gap:0}}>
+              <div style={{marginTop:0}}>
                 <h4>{video.title}</h4>
                 <div className="video-meta">
                   <span>{formatViews(video.viewCount)}</span>
