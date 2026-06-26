@@ -64,24 +64,24 @@ export default function ChannelPage() {
   return (
     <div className="channel-page">
       {/* Bannière */}
-      {selectedChannel?.bannerImageUrl && (
-      <div className="channel-banner-container">
-        {selectedChannel?.bannerImageUrl ? (
-          <img 
-            src={selectedChannel.bannerImageUrl} 
-            alt="Bannière"
-            style={{ 
-              width: '100%', 
-              height: '100%', 
-              objectFit: 'cover',      // Recadre l'image pour remplir sans déformer
-              objectPosition: 'center', // Centre l'image
-              borderRadius: 18,
-            }}
-          />
-        ) : (
-          <div style={{ width: '100%', height: '100%', backgroundColor: '#333' }} /> // Gris par défaut si pas de bannière
-        )}
-      </div>
+      {selectedChannel.bannerImageUrl && (
+        <div className="channel-banner-container">
+          {selectedChannel?.bannerImageUrl ? (
+            <img 
+              src={selectedChannel.bannerImageUrl} 
+              alt="Bannière"
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                objectFit: 'cover',      // Recadre l'image pour remplir sans déformer
+                objectPosition: 'center', // Centre l'image
+                borderRadius: 18,
+              }}
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', backgroundColor: '#333' }} /> // Gris par défaut si pas de bannière
+          )}
+        </div>
       )}
 
       <div className="channel-header">
