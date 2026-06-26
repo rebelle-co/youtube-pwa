@@ -49,7 +49,7 @@ export default function ChannelPage() {
 
   return (
     <div className="channel-page">
-      {/* Bannière 
+      {/* Bannière */}
       <div 
         className="channel-banner" 
         style={{ 
@@ -57,9 +57,13 @@ export default function ChannelPage() {
           backgroundColor: selectedChannel?.bannerImageUrl ? 'transparent' : '#333' 
         }}
       ></div>
-      */}
+
       <div className="channel-header">
-        <img src={selectedChannel.thumbnail} alt={selectedChannel.title} className="channel-avatar" />
+        <img 
+          src={selectedChannel?.thumbnail || '/default-avatar.png'} 
+          alt={selectedChannel?.title || 'Chaîne'} 
+          className="channel-avatar" 
+        />
         <div className="channel-info">
           <h1>{selectedChannel.title}</h1>
           <p>@username • X abonnés • Y vidéos</p>
