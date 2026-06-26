@@ -89,3 +89,6 @@
   margin-left: 16px;
   font-size: 14px;
 }
+.nav-icon { width: 24px; height: 24px; }
+.nav-text { font-size: 12px; }
+.nav-arrow { margin-left: auto; }
