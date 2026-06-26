@@ -15,10 +15,10 @@ export default function Navbar({ isOpen }: { isOpen: boolean }) {
   const { subscriptions, fetchVideosForChannel, setSelectedChannel, setActiveSubTab } = context;
 
   const navItems = [
-    { name: 'Accueil', path: '/', icon: '/assets/home.svg', activeIcon: '/assets/is-home.svg' },
-    { name: 'Téléchargements', path: '/downloads', icon: '/assets/shorts.svg', activeIcon: '/assets/is-shorts.svg' },
-    { name: 'Abonnements', path: '/subscriptions', icon: '/assets/subscribes.svg', activeIcon: '/assets/is-subscribes.svg', hasToggle: true },
-    { name: 'Vous', path: '/profile', icon: '/assets/you.svg', activeIcon: '/assets/is-you.svg', hasToggle: true },
+    { name: 'Accueil', path: '/', icon: './assets/home.svg', activeIcon: './assets/is-home.svg' },
+    { name: 'Shorts', path: '/downloads', icon: './assets/shorts.svg', activeIcon: './assets/is-shorts.svg' },
+    { name: 'Abonnements', path: '/subscriptions', icon: './assets/subscribes.svg', activeIcon: './assets/is-subscribes.svg', hasToggle: true },
+    { name: 'Vous', path: '/profile', icon: './assets/you.svg', activeIcon: './assets/is-you.svg', hasToggle: true },
   ]
 
   const handleChannelClick = (sub: YouTubeSubscription) => {
