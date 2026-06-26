@@ -64,7 +64,7 @@ export default function ChannelPage() {
   return (
     <div className="channel-page">
       {/* Bannière */}
-      {selectedChannel.bannerImageUrl && (
+      {selectedChannel?.bannerImageUrl && selectedChannel.bannerImageUrl !== "null" &&(
         <div className="channel-banner-container">
           {selectedChannel?.bannerImageUrl ? (
             <img 
