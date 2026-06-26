@@ -63,6 +63,8 @@
 .navbar.mini .nav-item {
   flex-direction: column; /* Icône au dessus */
   padding: 16px 0;
+  justify-content: center;
+  align-items: center;
 }
 
 .navbar.mini .nav-text {
@@ -98,9 +100,8 @@
   display: none; /* Caché par défaut */
   flex-direction: column;
   overflow-y: auto;
-  bottom: 64px; /* Se place juste au-dessus de la navbar mobile */
   left: 0;
-  width: 100dvw;
+  width: 100%;
   background-color: #141414;
   border-top: 1px solid #212121;
   max-height: 0;
