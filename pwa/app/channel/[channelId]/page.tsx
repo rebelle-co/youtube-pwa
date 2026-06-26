@@ -30,6 +30,7 @@ export default function ChannelPage() {
 
   useEffect(() => {
     const loadChannelData = async () => {
+      setSelectedChannel(null); 
       // Si on n'a pas de canal sélectionné dans le contexte (après refresh)
       if (!selectedChannel && channelId) {
         await fetchChannelById(channelId);
@@ -94,7 +95,12 @@ export default function ChannelPage() {
             {selectedChannel?.videoCount ? ` ${selectedChannel.videoCount} vidéos` : ' 0 vidéo'}
           </p>
           <div className="channel-desc">
-            Description courte de la chaîne ici... plus
+            <h1>{selectedChannel.description}</h1>
+            <button 
+              className="more-description"
+            >
+              plus
+            </button>
           </div>
           <button 
             className={`subscribe-btn ${isSubscribed ? 'subscribed' : ''}`}

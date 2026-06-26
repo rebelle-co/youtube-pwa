@@ -179,7 +179,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl?.split('=')[0];
 
       // 2. Avatar/Thumbnail : On privilégie 'high' ou 'medium' pour la meilleure résolution disponible
-      const avatarUrl = item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url;
+      const avatarUrl = (item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url)
+        ?.replace('default.jpg', 's800-c-k-c0x00ffffff-no-rj') // Force une taille de 800px nette
+        ?.replace('hqdefault.jpg', 's800-c-k-c0x00ffffff-no-rj');
 
       const channelData = {
         id: item.id,
