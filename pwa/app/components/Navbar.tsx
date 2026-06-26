@@ -9,75 +9,57 @@ export default function Navbar({ isOpen }: { isOpen: boolean }) {
   const context = useAppContext();
   const router = useRouter();
   const pathname = usePathname();
-  
-  // On stocke le nom du menu ouvert au lieu d'un simple booléen
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   
   if (!context) return null;
   const { subscriptions, fetchVideosForChannel, setSelectedChannel, setActiveSubTab } = context;
 
   const navItems = [
-    { name: 'Accueil', path: '/', icon: './assets/home.svg', activeIcon: './assets/is-home.svg' },
-    { name: 'Shorts', path: '/shorts', icon: './assets/shorts.svg', activeIcon: './assets/is-shorts.svg' },
-    { name: 'Abonnements', path: '/subscriptions', icon: './assets/subscribes.svg', activeIcon: './assets/is-subscribes.svg', hasToggle: true },
-    { name: 'Vous', path: '/profile', icon: './assets/you.svg', activeIcon: './assets/is-you.svg', hasToggle: true },
+    { name: 'Accueil', path: '/', icon: '/assets/home.svg', activeIcon: '/assets/is-home.svg' },
+    { name: 'Shorts', path: '/shorts', icon: '/assets/shorts.svg', activeIcon: '/assets/is-shorts.svg' },
+    { name: 'Abonnements', path: '/subscriptions', icon: '/assets/subscribes.svg', activeIcon: '/assets/is-subscribes.svg', hasToggle: true },
+    { name: 'Vous', path: '/profile', icon: '/assets/you.svg', activeIcon: '/assets/is-you.svg', hasToggle: true },
   ]
 
   const handleToggle = (e: React.MouseEvent, name: string) => {
-    e.stopPropagation(); // Empêche la propagation vers le bouton de navigation
+    e.stopPropagation();
     setOpenMenu(openMenu === name ? null : name);
   };
-
-  const handleNavigation = (path: string) => {
-    router.push(path);
-  };
-
-  const handleChannelClick = (sub: YouTubeSubscription) => {
-    setSelectedChannel(sub)
-    fetchVideosForChannel(sub.id, sub.thumbnail)
-    setActiveSubTab('standard')
-    router.push(`/channel/${sub.id}`)
-  }
 
   return (
     <nav className={`navbar ${isOpen ? 'expanded' : 'mini'}`}>
       {navItems.map((item) => {
         const isActive = pathname === item.path
-        
+        const isMenuOpen = openMenu === item.name;
+
         return (
           <div key={item.path} className="nav-group">
             <button 
-              onClick={() => handleNavigation(item.path)}
+              onClick={() => router.push(item.path)}
               className={`nav-item ${isActive ? 'active' : ''}`}
             >
               <img src={isActive ? item.activeIcon : item.icon} alt={item.name} className="nav-icon" />
-              <span className="nav-text">{item.name}</span>
+              {isOpen && <span className="nav-text">{item.name}</span>}
               
-              {/* Flèche avec gestion de clic séparée */}
               {isOpen && item.hasToggle && (
                 <span className="nav-arrow" onClick={(e) => handleToggle(e, item.name)}>
-                  {openMenu === item.name ? '▲' : '▼'}
+                  {isMenuOpen ? '▲' : '▼'}
                 </span>
               )}
             </button>
 
-            {/* Cascade dynamique */}
-            {/* Cascade Abonnements */}
-            {isOpen && openMenu === 'Abonnements' && (
-              <div className="navbar-cascade">
-                {subscriptions.length > 0 ? (
-                  subscriptions.map((sub: YouTubeSubscription) => (
-                    <div 
-                      key={sub.id} 
-                      className="nav-sub-item" 
-                      onClick={() => handleChannelClick(sub)}
-                    >
+            {/* Le menu cascade est inséré ici, juste en dessous du bouton */}
+            {isOpen && isMenuOpen && (
+              <div className="navbar-cascade open">
+                {item.name === 'Abonnements' ? (
+                  subscriptions.map((sub: any) => (
+                    <div key={sub.id} className="nav-sub-item" onClick={() => handleChannelClick(sub)}>
                       <img src={sub.thumbnail} alt={sub.title} className="nav-sub-avatar" />
-                      <span className="nav-sub-title">{sub.title}</span>
+                      <span className="nav-sub-name">{sub.title}</span>
                     </div>
                   ))
                 ) : (
-                  <div className="nav-sub-item">Aucun abonnement</div>
+                  <div className="nav-sub-item">Profil utilisateur ici...</div>
                 )}
               </div>
             )}

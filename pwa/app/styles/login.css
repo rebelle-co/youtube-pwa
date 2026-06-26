@@ -272,25 +272,7 @@
   height: 100%;
 }
 
-/* Conteneur de la cascade */
-.navbar-cascade {
-  position: fixed;
-  bottom: 64px; /* Se place juste au-dessus de la navbar mobile */
-  left: 0;
-  width: 100vw;
-  background-color: #141414;
-  border-top: 1px solid #212121;
-  max-height: 0;
-  overflow-y: auto;
-  transition: max-height 0.3s ease-in-out;
-  z-index: 99;
-  box-shadow: 0 -4px 10px rgba(0, 0, 0, 0.5);
-}
 
-/* Quand la cascade est ouverte */
-.navbar-cascade.open {
-  max-height: 300px; 
-}
 
 /* Un élément (chaîne) dans la cascade de la navbar */
 .nav-sub-item {
@@ -352,9 +334,6 @@
     scrollbar-width: none;
   }
   
-  .navbar-cascade.open {
-    max-height: 350px; /* S'étend vers le bas */
-  }
 
   .nav-sub-item {
     padding: 8px 12px;
