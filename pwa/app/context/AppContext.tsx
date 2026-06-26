@@ -126,12 +126,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const data = await res.json();
     
     const bannerUrl = data.items?.[0]?.brandingSettings?.image?.bannerExternalUrl;
-    
     if (!bannerUrl) return null;
 
     // SOLUTION : Si l'URL contient des paramètres après le '=', 
     // on les coupe pour forcer le CDN à servir l'image originale.
-    return bannerUrl.split('=')[0]; 
+    return `${bannerUrl}=w2560-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj`;
   };
 
   // Dans AppProvider (AppContext.tsx)
