@@ -26,6 +26,14 @@ export default function Navbar({ isOpen }: { isOpen: boolean }) {
     setOpenMenu(openMenu === name ? null : name);
   };
 
+  const handleChannelClick = (sub: YouTubeSubscription) => {
+    setSelectedChannel(sub)
+    fetchVideosForChannel(sub.id, sub.thumbnail)
+    setActiveSubTab('standard')
+    router.push(`/channel/${sub.id}`)
+  }
+
+
   return (
     <nav className={`navbar ${isOpen ? 'expanded' : 'mini'}`}>
       {navItems.map((item) => {
