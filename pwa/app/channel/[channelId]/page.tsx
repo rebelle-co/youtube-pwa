@@ -11,7 +11,7 @@ export default function ChannelPage() {
 
   const { 
     selectedChannel, videos, fetchVideosForChannel, 
-    fetchChannelPlaylists, channelPlaylists, handleToggleSubscribe, isSubscribed 
+    fetchChannelPlaylists, channelPlaylists, handleToggleSubscribe, isSubscribed, fetchChannelBanner,setSelectedChannel 
   } = useAppContext();
 
   const params = useParams(); // Récupérer l'ID de l'URL
@@ -25,6 +25,19 @@ export default function ChannelPage() {
     }
   }, [channelId]);
 
+  useEffect(() => {
+    if (selectedChannel && channelId) {
+      fetchVideosForChannel(selectedChannel.id);
+      fetchChannelPlaylists(selectedChannel.id);
+      
+      // Récupération de la bannière
+      fetchChannelBanner(selectedChannel.id).then((url: string | null) => {
+        // Mettre à jour l'objet pour inclure la bannière
+        setSelectedChannel({ ...selectedChannel, bannerImageUrl: url });
+      });
+    }
+  }, [channelId]);
+
   // Filtrage intelligent
   const filteredVideos = videos.filter((v: YouTubeVideo) => { // Ajoutez le type ici
     if (activeTab === 'Videos') return v.type === 'standard';
@@ -32,12 +45,18 @@ export default function ChannelPage() {
     return true;
   });
 
-  if (!selectedChannel) return <div>Chargement de la chaîne...</div>
+  if (!channelId) return <div>Chargement de la chaîne...</div>
 
   return (
     <div className="channel-page">
       {/* Bannière */}
-      <div className="channel-banner"></div>
+      <div 
+        className="channel-banner" 
+        style={{ 
+          backgroundImage: selectedChannel?.bannerImageUrl ? `url(${selectedChannel.bannerImageUrl})` : 'none',
+          backgroundColor: selectedChannel?.bannerImageUrl ? 'transparent' : '#333' 
+        }}
+      ></div>
 
       <div className="channel-header">
         <img src={selectedChannel.thumbnail} alt={selectedChannel.title} className="channel-avatar" />

@@ -112,6 +112,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [channelData, setChannelData] = useState<any>(null); // Pour stocker abonnés/bannière
   const [channelPlaylists, setChannelPlaylists] = useState<any[]>([]);
 
+  const fetchChannelBanner = async (channelId: string) => {
+    const token = localStorage.getItem('yt_oauth_token');
+    const res = await fetch(
+      `https://www.googleapis.com/youtube/v3/channels?part=brandingSettings&id=${channelId}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    const data = await res.json();
+    // L'URL se trouve dans : data.items[0].brandingSettings.image.bannerExternalUrl
+    return data.items?.[0]?.brandingSettings?.image?.bannerExternalUrl || null;
+  };
+
   // Fonction pour synchroniser le nombre de vidéos
   const syncChannelVideos = async (channelId: string, ytTotal: number) => {
     const { count } = await supabase
