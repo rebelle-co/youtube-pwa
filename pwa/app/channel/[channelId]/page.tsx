@@ -7,6 +7,7 @@ import { YouTubePlaylist, YouTubeVideo } from '@/app/types/youtube'
 
 export default function ChannelPage() {
   const [activeTab, setActiveTab] = useState('Accueil')
+  const [visibleCount, setVisibleCount] = useState(20);
   const tabs = ['Accueil', 'Videos', 'Shorts', 'Playlists']
 
   
@@ -27,6 +28,12 @@ export default function ChannelPage() {
 
   const params = useParams(); // Récupérer l'ID de l'URL
   const channelId = params?.channelId as string;
+
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [activeTab]);
+
+
 
   useEffect(() => {
     let isMounted = true; // Sécurité pour éviter les fuites mémoire
@@ -64,6 +71,18 @@ export default function ChannelPage() {
   }, [videos, activeTab]);
 
   console.log("URL de la bannière :", selectedChannel?.bannerImageUrl)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      // Si on est à 100px du bas de la page
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 100) {
+        setVisibleCount(prev => prev + 20);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [filteredVideos]); // On écoute filteredVideos pour savoir s'il reste des éléments
 
   if (!selectedChannel) return <div>Chargement de la chaîne...</div>
 
@@ -143,7 +162,7 @@ export default function ChannelPage() {
           ))
         ) : (
           // Affichage des Vidéos / Shorts (via filteredVideos)
-          filteredVideos.map((video: YouTubeVideo) => (
+          filteredVideos.slice(0, visibleCount).map((video: YouTubeVideo) => (
             <div key={video.id} className="video-card">
               <div style={{position:"relative"}}>
                 <img src={video.thumbnail} alt={video.title} />
@@ -160,6 +179,7 @@ export default function ChannelPage() {
             </div>
           ))
         )}
+        
       </div>
     </div>
   )
