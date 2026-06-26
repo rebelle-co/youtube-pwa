@@ -84,6 +84,9 @@
   padding: 12px 24px;
   width: 100%;
 }
+.nav-group{
+  width:100%;
+}
 
 .navbar.expanded .nav-text {
   margin-left: 16px;
