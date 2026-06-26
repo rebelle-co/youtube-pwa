@@ -64,6 +64,7 @@ export default function ChannelPage() {
   return (
     <div className="channel-page">
       {/* Bannière */}
+      {selectedChannel?.bannerImageUrl && (
       <div className="channel-banner-container">
         {selectedChannel?.bannerImageUrl ? (
           <img 
@@ -81,6 +82,7 @@ export default function ChannelPage() {
           <div style={{ width: '100%', height: '100%', backgroundColor: '#333' }} /> // Gris par défaut si pas de bannière
         )}
       </div>
+      )}
 
       <div className="channel-header">
         <img src={selectedChannel.thumbnail} alt={selectedChannel.title} className="channel-avatar" />
