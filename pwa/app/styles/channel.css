@@ -3,7 +3,7 @@
 /* Dans channel.css */
 .channel-banner-container {
   width: 100%;
-  height: 250px; /* Un peu plus haut pour plus de détails */
+  height: 200px; /* Un peu plus haut pour plus de détails */
   overflow: hidden;
   position: relative;
 }
