@@ -103,4 +103,9 @@
   justify-content: space-between;
   display: flex;
   flex-direction: column;
+  max-width: 340px;
+}
+
+.video-card img {
+  max-width: 340px;
 }
