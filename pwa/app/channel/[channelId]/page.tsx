@@ -34,7 +34,6 @@ export default function ChannelPage() {
     const loadChannelData = async () => {
       // Nettoyage immédiat
       setSelectedChannel(null);
-      setVideos([]);
 
       if (channelId) {
         await fetchChannelById(channelId);

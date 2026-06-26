@@ -133,22 +133,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return `${bannerUrl}=w2560-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj`;
   };
 
-  // Dans AppProvider (AppContext.tsx)
-  // 1. Assurez-vous d'ajouter "brandingSettings" dans la requête API
+  // Dans AppContext.tsx
   const fetchChannelById = async (channelId: string) => {
     const token = localStorage.getItem("yt_oauth_token");
-    
-    // 1. Requête Supabase optimisée avec maybeSingle()
-    const { data: cached, error } = await supabase
+    if (!token) return;
+
+    // 1. Reset pour éviter les conflits d'affichage
+    setSelectedChannel(null);
+
+    // 2. Tenter Supabase
+    const { data: cached } = await supabase
       .from('channels')
       .select('*')
       .eq('id', channelId)
       .maybeSingle();
 
-    // 2. Vérification simplifiée : si on a une donnée et qu'elle a moins de 24h
-    const isFresh = cached && (new Date().getTime() - new Date(cached.updated_at).getTime() < 86400000);
-
-    if (isFresh) {
+    if (cached && (new Date().getTime() - new Date(cached.updated_at).getTime() < 86400000)) {
       setSelectedChannel({
         id: cached.id,
         title: cached.title,
@@ -159,53 +159,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
         subscriberCount: cached.subscriber_count,
         videoCount: cached.video_count,
       });
-      return; // On arrête là, pas besoin d'appeler l'API YouTube
+      return;
     }
 
-    // 3. Sinon, fetch YouTube et Upsert
-    if (!token) return;
-    
-    const res = await fetch(
-      `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,brandingSettings&id=${channelId}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    
-    if (!res.ok) return; // Sécurité en cas d'erreur API YouTube
-    const data = await res.json();
+    // 3. Sinon, Fetch YouTube
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics,brandingSettings&id=${channelId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
 
-    if (data.items?.length) {
-      const item = data.items[0];
-      
-      // ... (votre logique de traitement des données reste inchangée)
-      const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl?.split('=')[0];
-      const avatarUrl = (item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url)
-        ?.replace('default.jpg', 's800-c-k-c0x00ffffff-no-rj')
-        ?.replace('hqdefault.jpg', 's800-c-k-c0x00ffffff-no-rj');
+      if (data.items?.length) {
+        const item = data.items[0];
+        // Traitement des images
+        const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl;
+        const avatarUrl = item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url;
 
-      const channelData = {
-        id: item.id,
-        title: item.snippet.title,
-        thumbnail_url: avatarUrl,
-        banner_url: bannerUrl || null,
-        username: item.snippet.customUrl,
-        description: item.snippet.description,
-        subscriber_count: parseInt(item.statistics.subscriberCount),
-        video_count: parseInt(item.statistics.videoCount),
-        updated_at: new Date().toISOString()
-      };
+        const newChannel = {
+          id: item.id,
+          title: item.snippet.title,
+          thumbnail_url: avatarUrl,
+          banner_url: bannerUrl || null,
+          username: item.snippet.customUrl,
+          description: item.snippet.description,
+          subscriber_count: parseInt(item.statistics.subscriberCount) || 0,
+          video_count: parseInt(item.statistics.videoCount) || 0,
+          updated_at: new Date().toISOString()
+        };
 
-      await supabase.from('channels').upsert(channelData);
+        await supabase.from('channels').upsert(newChannel);
 
-      setSelectedChannel({
-        id: channelData.id,
-        title: channelData.title,
-        thumbnail: channelData.thumbnail_url,
-        bannerImageUrl: channelData.banner_url,
-        username: channelData.username,
-        description: channelData.description,
-        subscriberCount: channelData.subscriber_count,
-        videoCount: channelData.video_count,
-      });
+        setSelectedChannel({
+          id: newChannel.id,
+          title: newChannel.title,
+          thumbnail: newChannel.thumbnail_url,
+          bannerImageUrl: newChannel.banner_url,
+          username: newChannel.username,
+          description: newChannel.description,
+          subscriberCount: newChannel.subscriber_count,
+          videoCount: newChannel.video_count,
+        });
+      }
+    } catch (err) {
+      console.error("Erreur critique:", err);
     }
   };
 
