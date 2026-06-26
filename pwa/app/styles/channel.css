@@ -122,7 +122,7 @@
   margin: 0 auto;
   width: 100%;
   cursor: pointer;
-  gap: 5px;
+  gap: 0;
 }
 
 .video-card img {
