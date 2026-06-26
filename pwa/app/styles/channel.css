@@ -40,12 +40,21 @@
 
 .channel-desc {
   max-width: 600px;
+  overflow: hidden;
+  cursor: text;
+  margin: 1rem 0;
+  display: flex;
+  flex-direction: row;
+  gap:5px;
+}
+
+.channel-desc h1 {
+  max-width: 400px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #aaa;
-  cursor: pointer;
-  margin: 1rem 0;
+  color: #fff;
+  margin: 0;
 }
 
 .subscribe-btn {
