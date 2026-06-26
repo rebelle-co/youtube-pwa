@@ -27,27 +27,31 @@ interface YouTubeVideo {
 
 // Outils de formatage
 const getRelativeTime = (isoString: string): string => {
-  if (!isoString) return "à l'instant"
-  const now = new Date()
-  const past = new Date(isoString)
-  const diffMs = now.getTime() - past.getTime()
-  if (diffMs < 0) return "à l'instant"
+  if (!isoString) return "à l'instant";
+  const now = new Date();
+  const past = new Date(isoString);
+  const diffMs = now.getTime() - past.getTime();
+  if (diffMs < 0) return "à l'instant";
 
-  const diffSecs = Math.floor(diffMs / 1000)
-  const diffMins = Math.floor(diffSecs / 60)
-  const diffHours = Math.floor(diffMins / 60)
-  const diffDays = Math.floor(diffHours / 24)
-  const diffWeeks = Math.floor(diffDays / 7)
-  const diffMonths = Math.floor(diffDays / 30.416)
-  const diffYears = Math.floor(diffDays / 365.25)
+  const diffSecs = Math.floor(diffMs / 1000);
+  const diffMins = Math.floor(diffSecs / 60);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  const diffWeeks = Math.floor(diffDays / 7);
+  const diffMonths = Math.floor(diffDays / 30);
+  const diffYears = Math.floor(diffDays / 365);
 
-  if (diffSecs < 60) return diffSecs <= 1 ? "à l'instant" : `${diffSecs} seconde${diffSecs > 1 ? 's' : ''}`
-  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''}`
-  if (diffHours < 24) return `${diffHours} heure${diffHours > 1 ? 's' : ''}`
-  if (diffDays < 7) return `${diffDays} jour${diffDays > 1 ? 's' : ''}`
-  if (diffWeeks < 4) return `${diffWeeks} semaine${diffWeeks > 1 ? 's' : ''}`
-  if (diffMonths < 12) return `${diffMonths} mois`
-  return `${diffYears} an${diffYears > 1 ? 's' : ''}`
+  if (diffSecs < 60) return "à l'instant";
+  if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''}`;
+  if (diffHours < 24) return `${diffHours} heure${diffHours > 1 ? 's' : ''}`;
+  if (diffDays < 7) return `${diffDays} jour${diffDays > 1 ? 's' : ''}`;
+  
+  // Correction : si c'est moins d'un mois, on affiche en semaines
+  if (diffMonths < 1) return `${diffWeeks} semaine${diffWeeks > 1 ? 's' : ''}`;
+  
+  // Si on est ici, c'est qu'il y a au moins 1 mois
+  if (diffMonths < 12) return `il y a ${diffMonths} mois`;
+  return `il y a ${diffYears} an${diffYears > 1 ? 's' : ''}`;
 }
 
 const parseISODuration = (isoDuration: string): string => {
@@ -70,10 +74,10 @@ const parseISODuration = (isoDuration: string): string => {
 }
 
 const formatViews = (views?: number): string => {
-  if (!views) return '0 vue'
-  if (views >= 1000000) return `${(views / 1000000).toFixed(1).replace('.', '.')} M de vues`
-  if (views >= 1000) return `${(views / 1000).toFixed(0)} k de vues`
-  return `${views} vue${views > 1 ? 's' : ''}`
+  if (!views) return '0 vue';
+  if (views >= 1000000) return `${(views / 1000000).toFixed(1)} M de vues`;
+  if (views >= 1000) return `${Math.floor(views / 1000)} k vues`; // Supprime le .0
+  return `${views} vue${views > 1 ? 's' : ''}`;
 }
 
 export function AppProvider({ children }: { children: ReactNode }) {
