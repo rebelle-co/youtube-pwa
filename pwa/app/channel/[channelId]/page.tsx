@@ -9,10 +9,14 @@ export default function ChannelPage() {
   const [activeTab, setActiveTab] = useState('Accueil')
   const tabs = ['Accueil', 'Videos', 'Shorts', 'Playlists']
 
+  
+
   const { 
     selectedChannel, videos, fetchVideosForChannel, 
     fetchChannelPlaylists, channelPlaylists, handleToggleSubscribe, isSubscribed, fetchChannelBanner,setSelectedChannel 
   } = useAppContext();
+
+  console.log("Context check:", { setSelectedChannel, fetchChannelBanner });
 
   const params = useParams(); // Récupérer l'ID de l'URL
   const channelId = params?.channelId as string;
