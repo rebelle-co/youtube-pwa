@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { useAppContext } from '@/app/context/AppContext'
-import "./../styles/channel.css"
+import "./styles/channel.css"
 import { YouTubeVideo } from '@/app/types/youtube'
 
 export default function ChannelPage() {
