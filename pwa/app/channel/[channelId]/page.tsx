@@ -78,7 +78,7 @@ export default function ChannelPage() {
         <div className="channel-info">
           <h1>{selectedChannel.title}</h1>
           <p>
-            {selectedChannel?.username ? `@${selectedChannel.username}` : ''} • 
+            {selectedChannel?.username ? `${selectedChannel.username}` : ''} • 
             {selectedChannel?.subscriberCount ? ` ${formatNumber(selectedChannel.subscriberCount)} abonnés` : ' 0 abonné'} • 
             {selectedChannel?.videoCount ? ` ${selectedChannel.videoCount} vidéos` : ' 0 vidéo'}
           </p>

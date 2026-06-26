@@ -120,8 +120,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       { headers: { Authorization: `Bearer ${token}` } }
     );
     const data = await res.json();
-    // L'URL se trouve dans : data.items[0].brandingSettings.image.bannerExternalUrl
-    return data.items?.[0]?.brandingSettings?.image?.bannerExternalUrl || null;
+    
+    const bannerUrl = data.items?.[0]?.brandingSettings?.image?.bannerExternalUrl;
+    
+    if (!bannerUrl) return null;
+
+    // Astuce : YouTube permet de modifier la taille via des paramètres d'URL
+    // Pour obtenir la version la plus large possible (souvent le cas par défaut),
+    // assurez-vous de ne pas limiter via des paramètres type "=wXXX-hXXX"
+    // Si l'URL contient "=w...-h...", vous pouvez supprimer cette partie 
+    // pour récupérer l'image originale non redimensionnée.
+    
+    return bannerUrl.split('=')[0]; 
   };
 
   // Dans AppProvider (AppContext.tsx)
