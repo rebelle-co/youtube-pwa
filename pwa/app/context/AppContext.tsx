@@ -541,24 +541,4 @@ export function AppProvider({ children }: { children: ReactNode }) {
 }
 
 // Dans AppContext.tsx
-export const useAppContext = () => {
-  const context = useContext(AppContext);
-  if (!context) {
-    return {
-      user: null,
-      subscriptions: [],
-      loading: false,
-      // AJOUTEZ CES VALEURS PAR DÉFAUT POUR ÉVITER LE CRASH
-      fetchChannelBanner: () => Promise.resolve(null),
-      setSelectedChannel: () => {}, 
-      fetchVideosForChannel: () => {},
-      fetchChannelPlaylists: () => {},
-      handleToggleSubscribe: () => {},
-      isSubscribed: false,
-      selectedChannel: null,
-      videos: [],
-      channelPlaylists: []
-    };
-  }
-  return context;
-};
+export const useAppContext = () => useContext(AppContext)
