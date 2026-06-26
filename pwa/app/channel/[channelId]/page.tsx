@@ -65,13 +65,20 @@ export default function ChannelPage() {
   return (
     <div className="channel-page">
       {/* Bannière */}
-      <div 
-        className="channel-banner" 
-        style={{ 
-          backgroundImage: selectedChannel?.bannerImageUrl ? `url(${selectedChannel.bannerImageUrl})` : 'none',
-          backgroundColor: selectedChannel?.bannerImageUrl ? 'transparent' : '#333' 
-        }}
-      ></div>
+      <div className="channel-banner-container" style={{ width: '100%', height: '200px', overflow: 'hidden' }}>
+        {selectedChannel?.bannerImageUrl && (
+          <img 
+            src={selectedChannel.bannerImageUrl.split('=')[0]} 
+            alt="Bannière de la chaîne"
+            style={{ 
+              width: '100%', 
+              height: '100%', 
+              objectFit: 'cover',
+              objectPosition: 'center'
+            }}
+          />
+        )}
+      </div>
 
       <div className="channel-header">
         <img src={selectedChannel.thumbnail} alt={selectedChannel.title} className="channel-avatar" />
