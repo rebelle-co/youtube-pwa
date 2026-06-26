@@ -18,7 +18,7 @@ export default function ChannelPage() {
   const { 
     selectedChannel, videos, fetchVideosForChannel, 
     fetchChannelPlaylists, channelPlaylists, handleToggleSubscribe, 
-    isSubscribed, fetchChannelBanner, setSelectedChannel 
+    isSubscribed, fetchChannelBanner, setSelectedChannel, fetchChannelById
   } = context;
 
   console.log("Context check:", { setSelectedChannel, fetchChannelBanner });
@@ -28,19 +28,29 @@ export default function ChannelPage() {
   const channelId = params?.channelId as string;
 
   useEffect(() => {
-    // Vérification de sécurité : on attend que selectedChannel soit présent
-    if (selectedChannel?.id && channelId) {
-      fetchVideosForChannel(selectedChannel.id);
-      fetchChannelPlaylists(selectedChannel.id);
-      
-      // Vérification que la fonction existe avant de l'appeler
-      if (typeof fetchChannelBanner === 'function') {
-        fetchChannelBanner(selectedChannel.id).then((url: string | null) => {
-          setSelectedChannel({ ...selectedChannel, bannerImageUrl: url });
-        });
+    const loadChannelData = async () => {
+      // Si on n'a pas de canal sélectionné dans le contexte (après refresh)
+      if (!selectedChannel && channelId) {
+        await fetchChannelById(channelId);
       }
-    }
-  }, [selectedChannel?.id, channelId]); // On dépend de l'ID du canal
+      
+      // Une fois qu'on a le canal (soit par le contexte, soit récupéré ci-dessus)
+      if (selectedChannel?.id || channelId) {
+        const idToUse = selectedChannel?.id || channelId;
+        fetchVideosForChannel(idToUse);
+        fetchChannelPlaylists(idToUse);
+        
+        if (typeof fetchChannelBanner === 'function') {
+          fetchChannelBanner(idToUse).then((url: string | null) => {
+            // Mise à jour sécurisée
+            setSelectedChannel((prev: any) => ({ ...prev, bannerImageUrl: url }));
+          });
+        }
+      }
+    };
+
+    loadChannelData();
+  }, [channelId]); // On ne dépend que de l'ID dans l'URL
 
   // Filtrage intelligent
   const filteredVideos = videos.filter((v: YouTubeVideo) => { // Ajoutez le type ici
@@ -124,3 +134,4 @@ export default function ChannelPage() {
     </div>
   )
 }
+
