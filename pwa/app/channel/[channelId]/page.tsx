@@ -126,26 +126,17 @@ export default function ChannelPage() {
       </div>
 
       {/* Contenu (Grille de vidéos) */}
-      <div className="channel-content">
-        {videos
-          .filter((v: YouTubeVideo) => activeTab === 'Videos' ? v.type === 'standard' : true)
-          // Ajout du type ici : (video: YouTubeVideo)
-          .map((video: YouTubeVideo) => (
-            <div key={video.id} className="video-card">
-              <img src={video.thumbnail} alt={video.title} />
-              <h4>{video.title}</h4>
-            </div>
-          ))}
-      </div>
-
+      {/* Une seule div pour tout le contenu */}
       <div className="channel-content">
         {activeTab === 'Playlists' ? (
+          // Affichage des Playlists
           channelPlaylists.map((pl: YouTubePlaylist) => (
             <div key={pl.id} className="playlist-card">
               {pl.snippet.title}
             </div>
           ))
         ) : (
+          // Affichage des Vidéos / Shorts (via filteredVideos)
           filteredVideos.map((video: YouTubeVideo) => (
             <div key={video.id} className="video-card">
               <img src={video.thumbnail} alt={video.title} />
