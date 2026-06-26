@@ -159,7 +159,7 @@
   gap: 5px;
 }
 .video-meta span {
-  font-family: Roboto, "Arial", sans-serif; ;
+  font-family: Roboto, "Arial", sans-serif ;
 }
 
 .more-description {
@@ -177,4 +177,5 @@
   bottom: 5px;
   color: #fff;
   background-color:#00000099;
+  font-family: Roboto, "Arial", sans-serif;
 }
