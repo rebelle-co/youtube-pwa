@@ -115,9 +115,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
 
   // Dans AppContext.tsx
+
   const fetchChannelBanner = async (channelId: string) => {
     const token = localStorage.getItem('yt_oauth_token');
-    // Il faut bien demander 'brandingSettings'
+    
     const res = await fetch(
       `https://www.googleapis.com/youtube/v3/channels?part=brandingSettings&id=${channelId}`,
       { headers: { Authorization: `Bearer ${token}` } }
@@ -128,7 +129,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     if (!bannerUrl) return null;
 
-    // En enlevant les paramètres après le '=', vous récupérez l'image source originale.
+    // SOLUTION : Si l'URL contient des paramètres après le '=', 
+    // on les coupe pour forcer le CDN à servir l'image originale.
     return bannerUrl.split('=')[0]; 
   };
 

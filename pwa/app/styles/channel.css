@@ -15,6 +15,7 @@
   object-position: center; 
   /* Force le rendu haute qualité sur les navigateurs webkit */
   image-rendering: -webkit-optimize-contrast; 
+  image-rendering: crisp-edges;
 }
 
 .channel-banner {
