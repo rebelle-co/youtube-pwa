@@ -22,25 +22,19 @@ export default function ChannelPage() {
   const channelId = params?.channelId as string;
 
   useEffect(() => {
-    // Si on n'a pas de canal sélectionné, on le récupère via API
-    if (!selectedChannel && channelId) {
-        // Appelez ici une fonction pour récupérer les détails du canal
-        // fetchChannelDetails(channelId).then(data => setSelectedChannel(data));
-    }
-  }, [channelId]);
-
-  useEffect(() => {
-    if (selectedChannel && channelId) {
+    // Vérification de sécurité : on attend que selectedChannel soit présent
+    if (selectedChannel?.id && channelId) {
       fetchVideosForChannel(selectedChannel.id);
       fetchChannelPlaylists(selectedChannel.id);
       
-      // Récupération de la bannière
-      fetchChannelBanner(selectedChannel.id).then((url: string | null) => {
-        // Mettre à jour l'objet pour inclure la bannière
-        setSelectedChannel({ ...selectedChannel, bannerImageUrl: url });
-      });
+      // Vérification que la fonction existe avant de l'appeler
+      if (typeof fetchChannelBanner === 'function') {
+        fetchChannelBanner(selectedChannel.id).then((url: string | null) => {
+          setSelectedChannel({ ...selectedChannel, bannerImageUrl: url });
+        });
+      }
     }
-  }, [channelId]);
+  }, [selectedChannel?.id, channelId]); // On dépend de l'ID du canal
 
   // Filtrage intelligent
   const filteredVideos = videos.filter((v: YouTubeVideo) => { // Ajoutez le type ici

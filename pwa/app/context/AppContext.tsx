@@ -530,6 +530,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       handleToggleSubscribe,
       handleDownloadVideo,
       loginWithGoogle,
+      fetchChannelBanner,
       handleLogout,
       formatViews,
       getRelativeTime
