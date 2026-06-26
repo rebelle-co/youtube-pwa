@@ -140,11 +140,14 @@ export default function ChannelPage() {
           filteredVideos.map((video: YouTubeVideo) => (
             <div key={video.id} className="video-card">
               <img src={video.thumbnail} alt={video.title} />
-              <h4>{video.title}</h4>
-              <div className="video-meta">
-                <span>{formatViews(video.viewCount)}</span>
-                <span>•</span>
-                <span>{getRelativeTime(video.rawPublishedAt)}</span>
+              {video.duration && <span className="duration-tag">{video.duration}</span>}
+              <div style={{gap:0}}>
+                <h4>{video.title}</h4>
+                <div className="video-meta">
+                  <span>{formatViews(video.viewCount)}</span>
+                  <span>•</span>
+                  <span>{getRelativeTime(video.rawPublishedAt)}</span>
+                </div>
               </div>
             </div>
           ))
