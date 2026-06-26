@@ -172,15 +172,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (data.items?.length) {
         const item = data.items[0];
-        // Traitement des images
-        const bannerUrl = item.brandingSettings?.image?.bannerExternalUrl;
-        const avatarUrl = item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url;
+        
+        // 1. TRAITEMENT DE LA BANNIÈRE :
+        // Récupérez l'URL et ajoutez vos paramètres de qualité ici
+        const rawBannerUrl = item.brandingSettings?.image?.bannerExternalUrl;
+        const processedBannerUrl = rawBannerUrl 
+          ? `${rawBannerUrl}=w2560-fcrop64=1,00005a57ffffa5a8-k-c0xffffffff-no-nd-rj` 
+          : null;
+
+        // 2. TRAITEMENT DE L'AVATAR :
+        const avatarUrl = (item.snippet.thumbnails.high?.url || item.snippet.thumbnails.medium?.url)
+          ?.replace('default.jpg', 's800-c-k-c0x00ffffff-no-rj')
+          ?.replace('hqdefault.jpg', 's800-c-k-c0x00ffffff-no-rj');
 
         const newChannel = {
           id: item.id,
           title: item.snippet.title,
           thumbnail_url: avatarUrl,
-          banner_url: bannerUrl || null,
+          banner_url: processedBannerUrl || "null", // <--- C'est ici que vous enregistrez l'URL traitée
           username: item.snippet.customUrl,
           description: item.snippet.description,
           subscriber_count: parseInt(item.statistics.subscriberCount) || 0,
@@ -188,6 +197,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           updated_at: new Date().toISOString()
         };
 
+        // 3. Upsert vers Supabase
         await supabase.from('channels').upsert(newChannel);
 
         setSelectedChannel({
