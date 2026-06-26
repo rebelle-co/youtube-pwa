@@ -155,10 +155,24 @@ export default function ChannelPage() {
       {/* Une seule div pour tout le contenu */}
       <div className="channel-content">
         {activeTab === 'Playlists' ? (
-          // Affichage des Playlists
-          channelPlaylists.map((pl: YouTubePlaylist) => (
-            <div key={pl.id} className="playlist-card">
-              {pl.snippet.title}
+          channelPlaylists.map((pl: any) => (
+            <div key={pl.id} className="video-card playlist-card">
+              <div style={{ position: "relative" }}>
+                <img 
+                  src={pl.snippet.thumbnails?.maxres?.url || pl.snippet.thumbnails?.high?.url} 
+                  alt={pl.snippet.title} 
+                />
+                {/* Un petit indicateur de playlist */}
+                <span className="duration-tag" style={{ background: 'rgba(0,0,0,0.8)' }}>
+                  {pl.contentDetails?.itemCount || 0} vidéos
+                </span>
+              </div>
+              <div style={{ gap: 2, display: "flex", flexDirection: "column" }}>
+                <h4>{pl.snippet.title}</h4>
+                <div className="video-meta">
+                  <span>Playlist</span>
+                </div>
+              </div>
             </div>
           ))
         ) : (

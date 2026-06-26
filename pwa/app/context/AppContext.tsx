@@ -246,12 +246,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Fonction pour récupérer Playlists de la chaîne spécifique
   const fetchChannelPlaylists = async (channelId: string) => {
     const token = localStorage.getItem('yt_oauth_token');
-    const res = await fetch(
-      `https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&channelId=${channelId}&maxResults=50`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    const data = await res.json();
-    setChannelPlaylists(data.items || []);
+    if (!token) return;
+
+    try {
+      // 1. Récupération depuis YouTube
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&channelId=${channelId}&maxResults=50`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      const items = data.items || [];
+
+      // 2. Préparation pour Supabase
+      const playlistInserts = items.map((pl: any) => ({
+        id: pl.id,
+        channel_id: channelId,
+        title: pl.snippet.title,
+        // On prend la meilleure miniature disponible
+        thumbnail_url: pl.snippet.thumbnails?.maxres?.url || pl.snippet.thumbnails?.high?.url || pl.snippet.thumbnails?.medium?.url
+      }));
+
+      // 3. Upsert dans la base de données
+      if (playlistInserts.length > 0) {
+        await supabase.from('playlists').upsert(playlistInserts);
+      }
+
+      // 4. Mise à jour de l'état local
+      setChannelPlaylists(items);
+
+    } catch (err) {
+      console.error("Erreur lors de la récupération des playlists :", err);
+    }
   };
 
   const fetchYouTubeSubscriptions = async (token: string) => {
