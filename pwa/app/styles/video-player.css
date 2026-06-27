@@ -61,3 +61,31 @@
 /* Commentaires */
 .comments-section { margin-top: 30px; }
 .comment-input-row { display: flex; gap: 15px; margin-bottom: 20px; }
+
+.channel-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.comment-item {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.comment-item img {
+  border-radius: 50%;
+}
+
+.suggestion-item {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.suggestion-thumbnail {
+  width: 160px;
+  aspect-ratio: 16 / 9;
+  background: #ccc;
+  border-radius: 8px;
+}
