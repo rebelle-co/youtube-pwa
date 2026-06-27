@@ -1,0 +1,42 @@
+.video-watch-page {
+  display: flex;
+  max-width: 1600px;
+  margin: 0 auto;
+  gap: 24px;
+  padding: 24px;
+  height: calc(100vh - 60px); /* Hauteur totale moins la navbar */
+  overflow: hidden; /* Empêche le scroll sur la page entière */
+}
+
+.video-left-column {
+  flex: 2;
+  overflow-y: auto; /* Scroll indépendant */
+  padding-right: 10px;
+}
+
+.video-sidebar {
+  flex: 1;
+  overflow-y: auto; /* Scroll indépendant */
+  padding-left: 10px;
+}
+
+/* Ratio 16/9 pour le lecteur */
+.video-player-container {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: black;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.video-player-container iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Masquer les scrollbars pour un look plus "YouTube" */
+.video-left-column::-webkit-scrollbar,
+.video-sidebar::-webkit-scrollbar {
+  display: none;
+}
