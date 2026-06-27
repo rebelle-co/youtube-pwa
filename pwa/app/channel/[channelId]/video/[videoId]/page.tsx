@@ -13,6 +13,27 @@ export default function VideoPage() {
 
   useEffect(() => {
     if (videoId) {
+      // 1. Récupérer les données de la vidéo
+      const fetchVideoDetails = async () => {
+        const { data, error } = await supabase
+          .from('videos')
+          .select('*')
+          .eq('id', videoId as string)
+          .single();
+        
+        if (data) setVideoData(data);
+        else console.error("Erreur chargement vidéo:", error);
+      };
+
+      fetchVideoDetails();
+      
+      // 2. Récupérer les commentaires
+      fetchComments(videoId as string);
+    }
+  }, [videoId]); // Dépendance sur le changement de videoId
+
+  useEffect(() => {
+    if (videoId) {
       fetchComments(videoId as string);
     }
   }, [videoId]);
