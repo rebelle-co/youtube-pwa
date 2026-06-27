@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { useAppContext } from '@/app/context/AppContext'
 import "@/app/styles/channel.css"
 import { YouTubePlaylist, YouTubeVideo } from '@/app/types/youtube'
@@ -11,7 +11,7 @@ export default function ChannelPage() {
   const tabs = ['Accueil', 'Videos', 'Shorts', 'Playlists']
 
   
-
+  const router = useRouter();
 
   const context = useAppContext();
 
@@ -156,7 +156,7 @@ export default function ChannelPage() {
       <div className="channel-content">
         {activeTab === 'Playlists' ? (
           channelPlaylists.map((pl: any) => (
-            <div key={pl.id} className="video-card playlist-card">
+            <div key={pl.id} className="video-card playlist-card" onClick={() => router.push(`/channel/${channelId}/playlist/${pl.id}`)}>
               <div style={{ position: "relative" }}>
                 <img 
                   src={pl.snippet.thumbnails?.maxres?.url || pl.snippet.thumbnails?.high?.url} 
@@ -178,7 +178,7 @@ export default function ChannelPage() {
         ) : (
           // Affichage des Vidéos / Shorts (via filteredVideos)
           filteredVideos.slice(0, visibleCount).map((video: YouTubeVideo) => (
-            <div key={video.id} className="video-card">
+            <div key={video.id} className="video-card" onClick={() => router.push(`/channel/${channelId}/${video.id}`)}>
               <div style={{position:"relative"}}>
                 <img src={video.thumbnail} alt={video.title} />
                 {video.duration && <span className="duration-tag">{video.duration}</span>}

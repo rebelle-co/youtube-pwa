@@ -111,12 +111,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [playlists, setPlaylists] = useState<any[]>([])
   const [showPlaylistModal, setShowPlaylistModal] = useState(false)
   const [rating, setRating] = useState<'like' | 'dislike' | 'none'>('none')
+  const [relatedVideos, setRelatedVideos] = useState<YouTubeVideo[]>([]);
   
 
   // Ajoutez ces états dans AppProvider
   const [channelData, setChannelData] = useState<any>(null); // Pour stocker abonnés/bannière
   const [channelPlaylists, setChannelPlaylists] = useState<any[]>([]);
 
+
+  const fetchRelatedVideos = async (videoId: string) => {
+    const token = localStorage.getItem('yt_oauth_token');
+    if (!token) return;
+
+    try {
+      const res = await fetch(
+        `https://www.googleapis.com/youtube/v3/search?part=snippet&relatedToVideoId=${videoId}&type=video&maxResults=20`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      
+      // Formatage des suggestions
+      const formatted = data.items.map((item: any) => ({
+        id: item.id.videoId,
+        title: item.snippet.title,
+        thumbnail: item.snippet.thumbnails?.maxres?.url || item.snippet.thumbnails?.high?.url,
+        rawPublishedAt: item.snippet.publishedAt,
+        type: 'standard'
+      }));
+      
+      setRelatedVideos(formatted);
+    } catch (err) {
+      console.error("Erreur récupération suggestions :", err);
+    }
+  };
 
   // Dans AppContext.tsx
 
@@ -663,6 +690,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       fetchChannelById,
       fetchChannelPlaylists,
       channelPlaylists, // <--- EST-CE QUE CETTE LIGNE EST BIEN LÀ ?
+      relatedVideos,
+      setRelatedVideos,
       setChannelPlaylists,
       loginWithGoogle,
       fetchChannelBanner,

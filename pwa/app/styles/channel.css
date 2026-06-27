@@ -123,6 +123,11 @@
   gap: 5px;
 }
 
+.video-card:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease;
+}
+
 .video-card img {
   border-radius:10px;
   width: 100%;

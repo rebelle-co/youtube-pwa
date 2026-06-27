@@ -1,9 +1,12 @@
 'use client'
+import { useEffect } from 'react'
 import { useParams } from 'next/navigation'
+import { useAppContext } from "@/app/context/AppContext"
 import "@/app/styles/video-player.css"
 
 export default function VideoPage() {
   const { videoId } = useParams()
+  const { fetchRelatedVideos, relatedVideos } = useAppContext()
 
   return (
     <div className="video-watch-page">
@@ -28,9 +31,12 @@ export default function VideoPage() {
       {/* Colonne de droite (Suggestions) */}
       <aside className="video-sidebar">
         <h3>Vidéos suggérées</h3>
-        {/* Mapping de vos vidéos suggérées ici */}
-        <div className="suggestion-card">Vidéo suggérée 1</div>
-        <div className="suggestion-card">Vidéo suggérée 2</div>
+        {relatedVideos.map((video: any) => (
+          <div key={video.id} className="suggestion-card">
+            <img src={video.thumbnail} alt={video.title} />
+            <h4>{video.title}</h4>
+          </div>
+        ))}
       </aside>
     </div>
   )
