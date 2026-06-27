@@ -14,29 +14,33 @@ export default function VideoPage() {
   useEffect(() => {
     const loadAllData = async () => {
       if (!videoId) return;
-
       const vidId = videoId as string;
 
-      // 1. Récupérer les détails de la vidéo depuis Supabase
-      const { data, error } = await supabase
+      // 1. Récupération jointe Vidéo + Chaîne
+      const { data: videoWithChannel, error } = await supabase
         .from('videos')
-        .select('*')
+        .select(`
+          *,
+          channels:channel_id (*)
+        `)
         .eq('id', vidId)
         .single();
-      
-      if (data) {
-        setVideoData(data);
+
+      if (videoWithChannel) {
+        setVideoData(videoWithChannel);
+        // Vous avez maintenant accès à videoWithChannel.channels
+        // Exemple : videoWithChannel.channels.title
       } else {
         console.error("Erreur chargement vidéo:", error);
       }
 
-      // 2. Récupérer les commentaires et suggestions
+      // 2. Récupération séparée pour les commentaires (car ce n'est pas une relation 1:1)
       await fetchComments(vidId);
       await fetchRelatedVideos(vidId);
     };
 
     loadAllData();
-  }, [videoId]); // S'exécute uniquement quand le videoId change
+  }, [videoId]);
 
   const handlePost = async () => {
     await addComment(videoId as string, newComment);
@@ -60,9 +64,10 @@ export default function VideoPage() {
         
         <div className="video-header-row">
           <div className="channel-info-row">
-            <img src={videoData.channel_avatar_url} className="channel-avatar" alt="Avatar" />
+            <img src={videoData.channels?.thumbnail_url} alt="Logo" />
             <div className="channel-text">
-              <strong>{videoData.channel_title}</strong>
+              <h3>{videoData.channels?.title}</h3>
+              <p>{videoData.channels?.subscriber_count} abonnés</p>
             </div>
           </div>
           {/* Ajoutez ici vos boutons d'actions (like, etc.) */}
