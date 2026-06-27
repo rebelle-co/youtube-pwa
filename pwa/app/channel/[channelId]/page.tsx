@@ -178,7 +178,7 @@ export default function ChannelPage() {
         ) : (
           // Affichage des Vidéos / Shorts (via filteredVideos)
           filteredVideos.slice(0, visibleCount).map((video: YouTubeVideo) => (
-            <div key={video.id} className="video-card" onClick={() => router.push(`/channel/${channelId}/${video.id}`)}>
+            <div key={video.id} className="video-card" onClick={() => router.push(`/channel/${channelId}/video/${video.id}`)}>
               <div style={{position:"relative"}}>
                 <img src={video.thumbnail} alt={video.title} />
                 {video.duration && <span className="duration-tag">{video.duration}</span>}

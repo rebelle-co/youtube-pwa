@@ -5,7 +5,7 @@ import { useAppContext } from "@/app/context/AppContext"
 import "@/app/styles/video-player.css"
 
 export default function VideoPage() {
-  const { videoId } = useParams()
+  const { videoId } = useParams();
   const { fetchRelatedVideos, relatedVideos } = useAppContext()
 
   return (
