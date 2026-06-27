@@ -8,35 +8,35 @@ import { AppComment } from '@/app/types/youtube';
 export default function VideoPage() {
   const { videoId } = useParams();
   const [videoData, setVideoData] = useState<any>(null);
-  const { handleLikeVideo, fetchComments, addComment, comments, setComments } = useAppContext();
+  const { handleLikeVideo, fetchComments, addComment, comments, setComments, fetchRelatedVideos } = useAppContext();
   const [newComment, setNewComment] = useState('');
 
   useEffect(() => {
-    if (videoId) {
-      // 1. Récupérer les données de la vidéo
-      const fetchVideoDetails = async () => {
-        const { data, error } = await supabase
-          .from('videos')
-          .select('*')
-          .eq('id', videoId as string)
-          .single();
-        
-        if (data) setVideoData(data);
-        else console.error("Erreur chargement vidéo:", error);
-      };
+    const loadAllData = async () => {
+      if (!videoId) return;
 
-      fetchVideoDetails();
+      const vidId = videoId as string;
+
+      // 1. Récupérer les détails de la vidéo depuis Supabase
+      const { data, error } = await supabase
+        .from('videos')
+        .select('*')
+        .eq('id', vidId)
+        .single();
       
-      // 2. Récupérer les commentaires
-      fetchComments(videoId as string);
-    }
-  }, [videoId]); // Dépendance sur le changement de videoId
+      if (data) {
+        setVideoData(data);
+      } else {
+        console.error("Erreur chargement vidéo:", error);
+      }
 
-  useEffect(() => {
-    if (videoId) {
-      fetchComments(videoId as string);
-    }
-  }, [videoId]);
+      // 2. Récupérer les commentaires et suggestions
+      await fetchComments(vidId);
+      await fetchRelatedVideos(vidId);
+    };
+
+    loadAllData();
+  }, [videoId]); // S'exécute uniquement quand le videoId change
 
   const handlePost = async () => {
     await addComment(videoId as string, newComment);
