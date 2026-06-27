@@ -1,7 +1,9 @@
 // app/profile/page.tsx
 'use client'
 
-import { useAppContext } from "../context/AppContext"
+import { useAppContext } from "@/app/context/AppContext"
+
+
 
 
 export default function PlaylistsPage() {

@@ -1,8 +1,8 @@
 'use client'
 import { useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import { useAppContext } from "@/app/context/AppContext"
 import "@/app/styles/video-player.css"
+import { useAppContext } from '@/app/context/AppContext';
 
 export default function VideoPage() {
   const { videoId } = useParams();
