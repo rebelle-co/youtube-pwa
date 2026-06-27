@@ -662,6 +662,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       handleDownloadVideo,
       fetchChannelById,
       fetchChannelPlaylists,
+      channelPlaylists, // <--- EST-CE QUE CETTE LIGNE EST BIEN LÀ ?
+      setChannelPlaylists,
       loginWithGoogle,
       fetchChannelBanner,
       handleLogout,
