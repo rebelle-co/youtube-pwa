@@ -12,6 +12,16 @@ export interface YouTubeSubscription {
   bannerImageUrl: string
 }
 
+// Renommez Comment en AppComment
+export interface AppComment {
+  id: string;
+  video_id: string;
+  user_name: string;
+  user_avatar?: string;
+  text: string;
+  created_at: string;
+}
+
 export interface YouTubeVideo {
   id: string
   title: string

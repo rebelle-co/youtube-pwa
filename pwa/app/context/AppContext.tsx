@@ -3,7 +3,8 @@ import { supabase } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { YouTubeSubscription } from '../types/youtube'
+import { YouTubeSubscription, AppComment } from '../types/youtube'
+
 
 
 
@@ -112,7 +113,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [showPlaylistModal, setShowPlaylistModal] = useState(false)
   const [rating, setRating] = useState<'like' | 'dislike' | 'none'>('none')
   const [relatedVideos, setRelatedVideos] = useState<YouTubeVideo[]>([]);
-  
+  const [comments, setComments] = useState<AppComment[]>([]);
 
   // Ajoutez ces états dans AppProvider
   const [channelData, setChannelData] = useState<any>(null); // Pour stocker abonnés/bannière
@@ -346,6 +347,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setLoadingSubs(false)
     }
   }
+
+  // Récupérer les commentaires d'une vidéo spécifique
+  const fetchComments = async (videoId: string) => {
+    const { data, error } = await supabase
+      .from('comments')
+      .select('*')
+      .eq('video_id', videoId)
+      .order('created_at', { ascending: false });
+
+    if (!error) setComments(data || []);
+  };
+
+  // Ajouter un nouveau commentaire
+  const addComment = async (videoId: string, text: string) => {
+    if (!user) return;
+    
+    const { data, error } = await supabase
+      .from('comments')
+      .insert([
+        { 
+          video_id: videoId, 
+          user_name: user.user_metadata.full_name || 'Utilisateur',
+          user_avatar: user.user_metadata.avatar_url,
+          text 
+        }
+      ])
+      .select();
+
+    if (!error) {
+      setComments((prev) => [data[0], ...prev]);
+    }
+  };
 
   const fetchVideosForChannel = async (channelId: string, channelThumbnail?: string) => {
     setLoadingVideos(true)
@@ -691,6 +724,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       fetchChannelPlaylists,
       channelPlaylists, // <--- EST-CE QUE CETTE LIGNE EST BIEN LÀ ?
       relatedVideos,
+      comments,
+      fetchComments,
+      addComment,
+      setComments,
       setRelatedVideos,
       setChannelPlaylists,
       loginWithGoogle,

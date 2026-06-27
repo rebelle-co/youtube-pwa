@@ -1,43 +1,56 @@
 'use client'
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
-import "@/app/styles/video-player.css"
+import { supabase } from '@/lib/supabase'
 import { useAppContext } from '@/app/context/AppContext';
+import { AppComment } from '@/app/types/youtube';
 
 export default function VideoPage() {
   const { videoId } = useParams();
-  const { fetchRelatedVideos, relatedVideos } = useAppContext()
+  const [videoData, setVideoData] = useState<any>(null);
+  const { handleLikeVideo, fetchComments, addComment, comments, setComments } = useAppContext();
+  const [newComment, setNewComment] = useState('');
+
+  useEffect(() => {
+    if (videoId) {
+      fetchComments(videoId as string);
+    }
+  }, [videoId]);
+
+  const handlePost = async () => {
+    await addComment(videoId as string, newComment);
+    setNewComment(''); // Réinitialiser l'input
+  };
+
+  if (!videoData) return <div>Chargement...</div>;
 
   return (
     <div className="video-watch-page">
-      {/* Colonne de gauche (Lecteur + Infos) */}
       <main className="video-left-column">
-        <div className="video-player-container">
-          <iframe 
-            src={`https://www.youtube.com/embed/${videoId}?autoplay=1`} 
-            allowFullScreen 
-          />
-        </div>
-        <div className="video-info">
-          <h1>Titre de la vidéo</h1>
-          <div className="video-meta">714 k vues • il y a 1 an</div>
-          <div className="description-box">
-             {/* Ici votre composant description/commentaires */}
-             <p>Description ici...</p>
+        <iframe src={`https://www.youtube.com/embed/${videoId}?autoplay=1`} allowFullScreen />
+        
+        <h1>{videoData.title}</h1>
+        
+        <div className="video-header-row">
+          <div className="channel-info-row">
+            <img src={videoData.channel_avatar_url} className="channel-avatar" />
+            <div className="channel-text">
+              <strong>{videoData.channel_title}</strong>
+            </div>
           </div>
         </div>
-      </main>
 
-      {/* Colonne de droite (Suggestions) */}
-      <aside className="video-sidebar">
-        <h3>Vidéos suggérées</h3>
-        {relatedVideos.map((video: any) => (
-          <div key={video.id} className="suggestion-card">
-            <img src={video.thumbnail} alt={video.title} />
-            <h4>{video.title}</h4>
-          </div>
-        ))}
-      </aside>
+        <section className="comments-section">
+          <h3>{comments.length} commentaires</h3>
+          {comments.map((c: AppComment) => ( // <--- Ajoutez le type ici
+            <div key={c.id} className="comment-item">
+              {c.user_avatar && <img src={c.user_avatar} width={30} height={30} />}
+              <strong>{c.user_name}</strong>
+              <p>{c.text}</p>
+            </div>
+          ))}
+        </section>
+      </main>
     </div>
   )
 }

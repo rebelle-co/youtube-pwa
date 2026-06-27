@@ -40,3 +40,24 @@
 .video-sidebar::-webkit-scrollbar {
   display: none;
 }
+
+/* Layout général 
+.video-watch-page { display: flex; gap: 24px; padding: 20px; }
+.video-left-column { flex: 1; min-width: 0; }*/
+
+/* Header vidéo & Actions */
+.video-header-row { display: flex; align-items: flex-start; justify-content: space-between; margin-top: 15px; }
+.channel-info-row { display: flex; align-items: center; gap: 12px; }
+.channel-text { display: flex; flex-direction: column; }
+.actions-row { display: flex; gap: 8px; }
+
+/* Container Description */
+.description-container { 
+  background: #f2f2f2; padding: 12px; border-radius: 12px; margin-top: 15px; 
+}
+.desc-text { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.desc-text.collapsed { -webkit-line-clamp: 2; } /* Limite à 2 lignes */
+
+/* Commentaires */
+.comments-section { margin-top: 30px; }
+.comment-input-row { display: flex; gap: 15px; margin-bottom: 20px; }
